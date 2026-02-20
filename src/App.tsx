@@ -12,7 +12,7 @@ import SalesRoutes from './pages/SalesRoutes';
 import HumanResourcesRoutes from './pages/HumanResourcesRoutes';
 import MasterDataRoutes from './pages/MasterDataRoutes';
 import BusinessIntelligenceRoutes from './pages/BusinessIntelligenceRoutes';
-rialCenter from './pages/TrialCenter';
+import TrialCenter from './pages/TrialCenter';
 import NotFound from './pages/NotFound';
 
 function App() {
