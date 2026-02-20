@@ -43,6 +43,21 @@ const SupplierPerformance: React.FC = () => {
     { supplier: 'Global Services Ltd', score: 4.0, onTime: 85, quality: 92, cost: 4.3 }
   ];
 
+  const handleViewDetails = (supplier: string) => {
+    toast({ title: 'View Details', description: `Opening detailed performance report for ${supplier}` });
+  };
+
+  const handlePerformancePlan = (supplier: string) => {
+    toast({ title: 'Performance Plan', description: `Opening performance improvement plan for ${supplier}` });
+  };
+
+  const handleExportReport = () => {
+    toast({ title: 'Export Report', description: 'Generating supplier performance report...' });
+    setTimeout(() => {
+      toast({ title: 'Export Complete', description: 'Performance report exported successfully' });
+    }, 1500);
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center mb-4">
@@ -166,8 +181,8 @@ const SupplierPerformance: React.FC = () => {
                       </div>
                     </div>
                     <div className="mt-4 flex space-x-2">
-                      <Button size="sm" variant="outline">View Details</Button>
-                      <Button size="sm" variant="outline">Performance Plan</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(supplier.supplier)}>View Details</Button>
+                      <Button size="sm" variant="outline" onClick={() => handlePerformancePlan(supplier.supplier)}>Performance Plan</Button>
                     </div>
                   </div>
                 ))}

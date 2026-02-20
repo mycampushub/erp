@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SAPSection from '../components/SAPSection';
 import SAPTile from '../components/SAPTile';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { useVoiceAssistantContext } from '../context/VoiceAssistantContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from '../components/ui/use-toast';
 import SalesMetrics from './Sales/components/SalesMetrics';
@@ -13,7 +14,7 @@ import CustomersTable from './Sales/components/CustomersTable';
 import InvoicesTable from './Sales/components/InvoicesTable';
 
 const Sales: React.FC = () => {
-  const [isVoiceAssistantEnabled, setIsVoiceAssistantEnabled] = useState(false);
+  const { isEnabled: isVoiceAssistantEnabled } = useVoiceAssistantContext();
   const [salesFilter, setSalesFilter] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('orders');
@@ -22,35 +23,20 @@ const Sales: React.FC = () => {
   const { speak } = useVoiceAssistant();
   
   useEffect(() => {
-    const checkVoiceAssistant = () => {
-      const enabled = localStorage.getItem('voiceAssistantEnabled') === 'true';
-      setIsVoiceAssistantEnabled(enabled);
-      
-      if (enabled) {
-        speak(`Welcome to the Sales module. This is where you manage all aspects of your sales operations. 
-        You can create and track sales orders, manage customer relationships, review sales analytics, and handle billing activities. 
-        For example, you can use the 'Create Sales Order' tile to initiate a new customer order, or view your recent sales in the 
-        'Sales Overview' section. The 'Customer Analytics' feature allows you to understand customer behavior and preferences.`);
-      }
-    };
+    if (isVoiceAssistantEnabled) {
+      speak(`Welcome to the Sales module. This is where you manage all aspects of your sales operations.`);
+    }
     
-    checkVoiceAssistant();
-    
-    // Simulate loading data
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1200);
     
     return () => clearTimeout(timer);
-  }, [speak]);
+  }, [isVoiceAssistantEnabled, speak]);
 
   // Handle creating a new sales order
   const handleCreateSalesOrder = () => {
-    toast({
-      title: "Creating new sales order",
-      description: "The sales order creation form has been opened.",
-    });
-    // In a real app, this would redirect to a form or open a modal
+    navigate('/sales/orders');
   };
 
   return (
@@ -71,7 +57,12 @@ const Sales: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="This tile shows your total sales for the current quarter. It's a key performance indicator that helps you track your revenue goals."
         >
-          <SalesSummaryCards isLoading={isLoading} />
+          <SalesSummaryCards 
+            isLoading={isLoading} 
+            onViewReport={() => navigate('/sales/analytics')}
+            onViewCustomerList={() => navigate('/sales/customers')}
+            onViewOrderAnalytics={() => navigate('/sales/analytics')}
+          />
         </SAPTile>
       </SAPSection>
 
@@ -155,14 +146,14 @@ const Sales: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Use this tile to create and manage sales quotations before they become orders. Quotations allow you to provide pricing information to potential customers."
           icon={<span className="text-xl">💰</span>}
-          onClick={() => toast({ title: "Quotation Module", description: "Opening quotation management interface" })}
+          onClick={() => navigate('/sales/quotations')}
         />
         <SAPTile 
           title="Returns and Credits"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="This tile helps you process customer returns and issue credit notes. It's essential for managing product returns and customer refunds."
           icon={<span className="text-xl">↩️</span>}
-          onClick={() => toast({ title: "Returns Module", description: "Opening returns and credits interface" })}
+          onClick={() => navigate('/sales/returns')}
         />
       </SAPSection>
 
@@ -183,21 +174,21 @@ const Sales: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="This tile provides detailed analytics and reports about customer behavior and purchasing patterns. You can use these insights for targeted marketing and sales strategies."
           icon={<span className="text-xl">📈</span>}
-          onClick={() => toast({ title: "Customer Analytics", description: "Opening customer analytics dashboard" })}
+          onClick={() => navigate('/sales/analytics')}
         />
         <SAPTile 
           title="Customer Segmentation"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Use this tile to group customers based on criteria like purchase history, location, or industry. Customer segmentation helps in creating targeted marketing campaigns."
           icon={<span className="text-xl">🔍</span>}
-          onClick={() => toast({ title: "Customer Segmentation", description: "Opening customer segmentation tool" })}
+          onClick={() => navigate('/sales/analytics')}
         />
         <SAPTile 
           title="Customer Feedback"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Access and analyze customer feedback and satisfaction ratings. This information is valuable for improving products, services, and customer experience."
           icon={<span className="text-xl">💬</span>}
-          onClick={() => toast({ title: "Customer Feedback", description: "Opening customer feedback analytics" })}
+          onClick={() => navigate('/sales/analytics')}
         />
       </SAPSection>
 
@@ -228,14 +219,14 @@ const Sales: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="This tile helps you set up and manage recurring billing plans for customers with subscription services or installment payments."
           icon={<span className="text-xl">📅</span>}
-          onClick={() => toast({ title: "Billing Plans", description: "Opening billing plan management" })}
+          onClick={() => navigate('/sales/billing')}
         />
         <SAPTile 
           title="Payment Processing"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Access tools for processing customer payments, including credit cards, bank transfers, and other payment methods."
           icon={<span className="text-xl">💳</span>}
-          onClick={() => toast({ title: "Payment Processing", description: "Opening payment processing interface" })}
+          onClick={() => navigate('/sales/billing')}
         />
       </SAPSection>
     </div>

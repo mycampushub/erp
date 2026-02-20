@@ -15,6 +15,19 @@ const SAPHeader: React.FC<SAPHeaderProps> = ({ onMenuClick }) => {
   const { speak } = useVoiceAssistant();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAppsMenu, setShowAppsMenu] = useState(false);
+  const [pinnedSpaces, setPinnedSpaces] = useState([
+    { name: 'Trial Center', path: '/', pinned: true },
+    { name: 'Finance', path: '/finance', pinned: true },
+    { name: 'Manufacturing and Supply Chain', path: '/manufacturing', pinned: true },
+    { name: 'Procurement', path: '/procurement', pinned: true },
+  ]);
+  
+  const handleUnpinAll = () => {
+    setPinnedSpaces(pinnedSpaces.map(s => ({ ...s, pinned: false })));
+    if (isEnabled) {
+      speak("All spaces have been unpinned from your quick access.");
+    }
+  };
   
   const handleLogoHover = () => {
     if (isEnabled) {
@@ -84,7 +97,12 @@ const SAPHeader: React.FC<SAPHeaderProps> = ({ onMenuClick }) => {
                 <div className="mb-4">
                   <h3 className="text-sm font-medium mb-2 flex justify-between">
                     <span>Pinned Spaces (7)</span>
-                    <button className="text-xs text-blue-500">Unpin All</button>
+                    <button 
+                      className="text-xs text-blue-500 hover:text-blue-700"
+                      onClick={handleUnpinAll}
+                    >
+                      Unpin All
+                    </button>
                   </h3>
                   <ul className="space-y-1">
                     <li className="group">
@@ -149,6 +167,14 @@ const SAPHeader: React.FC<SAPHeaderProps> = ({ onMenuClick }) => {
               <span className="ml-1 text-xs">▼</span>
             </div>
           </Link>
+          
+          <a 
+            href="https://skillsim.vercel.app/dashboard" 
+            target="_self"
+            className="ml-4 px-4 py-2 bg-sap-blue text-white rounded hover:bg-blue-700 transition-colors font-medium"
+          >
+            Master Dashboard
+          </a>
         </div>
         
         <div className="flex items-center space-x-4">

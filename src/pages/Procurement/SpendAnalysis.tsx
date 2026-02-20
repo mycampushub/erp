@@ -24,6 +24,21 @@ const SpendAnalysis: React.FC = () => {
     }
   }, [isEnabled, speak]);
 
+  const handleViewDetails = (item: string) => {
+    toast({ title: 'View Details', description: `Opening detailed view for ${item}` });
+  };
+
+  const handleOptimize = (item: string) => {
+    toast({ title: 'Optimization', description: `Analyzing optimization opportunities for ${item}...` });
+    setTimeout(() => {
+      toast({ title: 'Optimization Complete', description: `Potential savings identified for ${item}` });
+    }, 1500);
+  };
+
+  const handleNegotiate = (supplier: string) => {
+    toast({ title: 'Negotiation', description: `Opening negotiation tools for ${supplier}` });
+  };
+
   const spendData = [
     { month: 'Jan', spend: 2100000, budget: 2500000, savings: 210000 },
     { month: 'Feb', spend: 2300000, budget: 2500000, savings: 230000 },
@@ -232,8 +247,8 @@ const SpendAnalysis: React.FC = () => {
                       </div>
                     </div>
                     <div className="mt-2 flex space-x-2">
-                      <Button size="sm" variant="outline">View Details</Button>
-                      <Button size="sm" variant="outline">Optimize</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(category.name)}>View Details</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleOptimize(category.name)}>Optimize</Button>
                     </div>
                   </div>
                 ))}
@@ -259,8 +274,8 @@ const SpendAnalysis: React.FC = () => {
                         </p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">View Details</Button>
-                        <Button size="sm" variant="outline">Negotiate</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleViewDetails(supplier.supplier)}>View Details</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleNegotiate(supplier.supplier)}>Negotiate</Button>
                       </div>
                     </div>
                   </div>

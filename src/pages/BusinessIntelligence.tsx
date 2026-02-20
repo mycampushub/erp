@@ -1,25 +1,21 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SAPSection from '../components/SAPSection';
 import SAPTile from '../components/SAPTile';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { useVoiceAssistantContext } from '../context/VoiceAssistantContext';
 
 const BusinessIntelligence: React.FC = () => {
-  const [isVoiceAssistantEnabled, setIsVoiceAssistantEnabled] = useState(false);
+  const navigate = useNavigate();
+  const { isEnabled: isVoiceAssistantEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   
   useEffect(() => {
-    const checkVoiceAssistant = () => {
-      const enabled = localStorage.getItem('voiceAssistantEnabled') === 'true';
-      setIsVoiceAssistantEnabled(enabled);
-      
-      if (enabled) {
-        speak("Welcome to the Business Intelligence module. Here you can access analytics, reporting, and data visualization tools for informed decision making.");
-      }
-    };
-    
-    checkVoiceAssistant();
-  }, [speak]);
+    if (isVoiceAssistantEnabled) {
+      speak("Welcome to the Business Intelligence module. Here you can access analytics, reporting, and data visualization tools for informed decision making.");
+    }
+  }, [isVoiceAssistantEnabled, speak]);
 
   return (
     <div>
@@ -35,18 +31,21 @@ const BusinessIntelligence: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Comprehensive overview of business performance."
           icon={<span className="text-xl">📈</span>}
+          onClick={() => navigate('/business-intelligence/executive')}
         />
         <SAPTile 
           title="KPI Monitoring"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Track key performance indicators across the organization."
           icon={<span className="text-xl">🎯</span>}
+          onClick={() => navigate('/business-intelligence/executive')}
         />
         <SAPTile 
           title="Balanced Scorecard"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Strategic performance management framework."
           icon={<span className="text-xl">⚖️</span>}
+          onClick={() => navigate('/business-intelligence/executive')}
         />
       </SAPSection>
 
@@ -60,18 +59,21 @@ const BusinessIntelligence: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Comprehensive financial performance analysis."
           icon={<span className="text-xl">💰</span>}
+          onClick={() => navigate('/business-intelligence/financial')}
         />
         <SAPTile 
           title="Sales Analytics"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Sales performance and customer analytics."
           icon={<span className="text-xl">📊</span>}
+          onClick={() => navigate('/business-intelligence/sales')}
         />
         <SAPTile 
           title="Manufacturing Analytics"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Production efficiency and quality analytics."
           icon={<span className="text-xl">🏭</span>}
+          onClick={() => navigate('/business-intelligence/manufacturing')}
         />
       </SAPSection>
 
@@ -85,18 +87,21 @@ const BusinessIntelligence: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Machine learning and predictive modeling."
           icon={<span className="text-xl">🔮</span>}
+          onClick={() => navigate('/business-intelligence/predictive')}
         />
         <SAPTile 
           title="Real-time Analytics"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Live data processing and instant insights."
           icon={<span className="text-xl">⚡</span>}
+          onClick={() => navigate('/business-intelligence/realtime')}
         />
         <SAPTile 
           title="Data Mining"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Discover patterns and insights in large datasets."
           icon={<span className="text-xl">⛏️</span>}
+          onClick={() => navigate('/business-intelligence/predictive')}
         />
       </SAPSection>
 
@@ -110,18 +115,21 @@ const BusinessIntelligence: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Create custom reports and analytics."
           icon={<span className="text-xl">📋</span>}
+          onClick={() => navigate('/business-intelligence/report-builder')}
         />
         <SAPTile 
           title="Data Visualization"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Interactive charts and visual analytics."
           icon={<span className="text-xl">📊</span>}
+          onClick={() => navigate('/business-intelligence/visualization')}
         />
         <SAPTile 
           title="Mobile Analytics"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Access analytics on mobile devices."
           icon={<span className="text-xl">📱</span>}
+          onClick={() => navigate('/business-intelligence/realtime')}
         />
       </SAPSection>
     </div>

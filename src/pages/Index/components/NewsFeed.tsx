@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import SAPTile from '../../../components/SAPTile';
 import { useVoiceAssistantContext } from '../../../context/VoiceAssistantContext';
-import { Edit, Settings } from 'lucide-react';
+import { Edit, Settings, ChevronDown } from 'lucide-react';
 
 interface NewsFeedProps {
   title: string;
@@ -16,6 +16,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({
   onSettings 
 }) => {
   const { isEnabled } = useVoiceAssistantContext();
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <div className="mb-8">
@@ -23,10 +24,10 @@ const NewsFeed: React.FC<NewsFeedProps> = ({
         <h2 className="sap-section-title flex items-center">
           {title}
           <button 
-            onClick={() => {}}
+            onClick={() => setIsExpanded(!isExpanded)}
             className="ml-2 text-blue-600"
           >
-            <span className="text-xs">▼</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
         </h2>
         

@@ -9,7 +9,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://skillsim.vercel.app" }
+        { "key": "Access-Control-Allow-Origin", "value": "https://careertodo.com" }
       ]
     }
   ]

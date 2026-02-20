@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -7,16 +7,18 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { useToast } from '../../hooks/use-toast';
-import { ArrowLeft, Plus, Edit, Eye, User, Phone, Mail, MapPin, Trash2, Download, Building } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Eye, User, Phone, Mail, MapPin, Trash2, Building, Briefcase, Calendar, Award, FileText, Clock, Users, Search } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
 import EnhancedDataTable, { EnhancedColumn, TableAction } from '../../components/data/EnhancedDataTable';
 import VoiceTrainingComponent from '../../components/procurement/VoiceTrainingComponent';
-import { listEntities, upsertEntity, removeEntity, generateId } from '../../lib/localCrud';
+import { getSeedData } from '../../data/hrSeedData';
+import { generateId } from '../../lib/localCrud';
 
 interface Employee {
   id: string;
@@ -28,6 +30,7 @@ interface Employee {
   position: string;
   department: string;
   manager: string;
+  managerId: string;
   startDate: string;
   status: 'Active' | 'On Leave' | 'Inactive' | 'Terminated';
   location: string;
@@ -41,17 +44,34 @@ interface Employee {
     phone: string;
     relationship: string;
   };
+  dateOfBirth: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  hireDate: string;
+  performanceRating: number;
 }
+
+const departments = ['Information Technology', 'Human Resources', 'Finance', 'Sales', 'Marketing', 'Operations', 'Engineering', 'Customer Service', 'Legal', 'Research & Development'];
+const locations = ['New York Office', 'Los Angeles Office', 'Chicago Office', 'Houston Office', 'Phoenix Office', 'San Francisco Office', 'Seattle Office', 'Boston Office', 'Denver Office', 'Austin Office', 'Remote'];
+const statuses: Employee['status'][] = ['Active', 'On Leave', 'Inactive', 'Terminated'];
+const employeeTypes: Employee['employeeType'][] = ['Full-time', 'Part-time', 'Contract', 'Intern'];
 
 const EmployeeCentral: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   const [activeTab, setActiveTab] = useState('employees');
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const seedData = getSeedData();
+  const [employees, setEmployees] = useState<Employee[]>(() => seedData.employees);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,45 +80,8 @@ const EmployeeCentral: React.FC = () => {
     }
   }, [isEnabled, speak]);
 
-  useEffect(() => {
-    loadEmployees();
-  }, []);
-
-  const loadEmployees = () => {
-    const existingEmployees = listEntities<Employee>('employees');
-    if (existingEmployees.length === 0) {
-      const sampleEmployees: Employee[] = [
-        {
-          id: generateId('emp'),
-          employeeId: 'EMP-001',
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john.smith@company.com',
-          phone: '+1-555-0123',
-          position: 'Senior Software Engineer',
-          department: 'Information Technology',
-          manager: 'Jane Doe',
-          startDate: '2023-01-15',
-          status: 'Active',
-          location: 'New York Office',
-          salary: 95000,
-          employeeType: 'Full-time',
-          workSchedule: 'Standard 40hrs/week',
-          skills: ['JavaScript', 'React', 'Node.js', 'Python'],
-          certifications: ['AWS Certified Developer', 'Scrum Master'],
-          emergencyContact: {
-            name: 'Jane Smith',
-            phone: '+1-555-0124',
-            relationship: 'Spouse'
-          }
-        }
-      ];
-      
-      sampleEmployees.forEach(emp => upsertEntity('employees', emp as any));
-      setEmployees(sampleEmployees);
-    } else {
-      setEmployees(existingEmployees);
-    }
+  const saveEmployees = (data: Employee[]) => {
+    setEmployees(data);
   };
 
   const handleCreateEmployee = () => {
@@ -114,8 +97,8 @@ const EmployeeCentral: React.FC = () => {
   };
 
   const handleDeleteEmployee = (empId: string) => {
-    removeEntity('employees', empId);
-    setEmployees(prev => prev.filter(e => e.id !== empId));
+    const updated = employees.filter(e => e.id !== empId);
+    saveEmployees(updated);
     toast({
       title: 'Employee Deleted',
       description: 'Employee record has been successfully removed.',
@@ -125,8 +108,8 @@ const EmployeeCentral: React.FC = () => {
   const handleSaveEmployee = (empData: Partial<Employee>) => {
     if (isEditing && selectedEmployee) {
       const updatedEmp = { ...selectedEmployee, ...empData };
-      upsertEntity('employees', updatedEmp as any);
-      setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? updatedEmp : e));
+      const updated = employees.map(e => e.id === selectedEmployee.id ? updatedEmp : e);
+      saveEmployees(updated);
       toast({
         title: 'Employee Updated',
         description: 'Employee information has been successfully updated.',
@@ -135,13 +118,19 @@ const EmployeeCentral: React.FC = () => {
       const newEmployee: Employee = {
         id: generateId('emp'),
         employeeId: `EMP-${String(employees.length + 1).padStart(3, '0')}`,
+        managerId: '',
+        workSchedule: 'Standard 40hrs/week',
         skills: [],
         certifications: [],
         emergencyContact: { name: '', phone: '', relationship: '' },
-        ...empData as Employee
-      };
-      upsertEntity('employees', newEmployee as any);
-      setEmployees(prev => [...prev, newEmployee]);
+        dateOfBirth: '',
+        address: { street: '', city: '', state: '', zipCode: '', country: 'USA' },
+        hireDate: new Date().toISOString().split('T')[0],
+        performanceRating: 0,
+        ...empData
+      } as Employee;
+      const updated = [newEmployee, ...employees];
+      saveEmployees(updated);
       toast({
         title: 'Employee Created',
         description: 'New employee has been successfully added.',
@@ -150,68 +139,81 @@ const EmployeeCentral: React.FC = () => {
     setIsDialogOpen(false);
   };
 
+  const handleViewEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setActiveTab('profile');
+  };
+
   const getStatusColor = (status: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'Active': 'bg-green-100 text-green-800',
       'On Leave': 'bg-yellow-100 text-yellow-800',
       'Inactive': 'bg-gray-100 text-gray-800',
       'Terminated': 'bg-red-100 text-red-800'
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const filteredEmployees = useMemo(() => {
+    if (!searchTerm) return employees;
+    const term = searchTerm.toLowerCase();
+    return employees.filter(emp => 
+      emp.firstName.toLowerCase().includes(term) ||
+      emp.lastName.toLowerCase().includes(term) ||
+      emp.email.toLowerCase().includes(term) ||
+      emp.employeeId.toLowerCase().includes(term) ||
+      emp.department.toLowerCase().includes(term) ||
+      emp.position.toLowerCase().includes(term)
+    );
+  }, [employees, searchTerm]);
+
   const columns: EnhancedColumn[] = [
-    { key: 'employeeId', header: 'Employee ID', sortable: true, searchable: true },
+    { key: 'employeeId', header: 'ID', sortable: true, searchable: true, width: '80px' },
     { 
       key: 'name', 
-      header: 'Name',
+      header: 'Employee',
       searchable: true,
-      render: (_, row: Employee) => `${row.firstName} ${row.lastName}`
+      render: (_, row: Employee) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+            {row.firstName[0]}{row.lastName[0]}
+          </div>
+          <div>
+            <div className="font-medium">{row.firstName} {row.lastName}</div>
+            <div className="text-xs text-muted-foreground">{row.position}</div>
+          </div>
+        </div>
+      )
     },
     { key: 'email', header: 'Email', searchable: true },
-    { key: 'position', header: 'Position', searchable: true },
-    { key: 'department', header: 'Department', filterable: true, filterOptions: [
-      { label: 'IT', value: 'Information Technology' },
-      { label: 'HR', value: 'Human Resources' },
-      { label: 'Sales', value: 'Sales' },
-      { label: 'Marketing', value: 'Marketing' },
-      { label: 'Finance', value: 'Finance' }
-    ]},
-    { key: 'manager', header: 'Manager', searchable: true },
-    { key: 'startDate', header: 'Start Date', sortable: true },
+    { key: 'department', header: 'Department', filterable: true, filterOptions: departments.map(d => ({ label: d, value: d })), searchable: true },
+    { key: 'location', header: 'Location', searchable: true },
+    { key: 'phone', header: 'Phone' },
     { 
       key: 'status', 
       header: 'Status',
       filterable: true,
-      filterOptions: [
-        { label: 'Active', value: 'Active' },
-        { label: 'On Leave', value: 'On Leave' },
-        { label: 'Inactive', value: 'Inactive' },
-        { label: 'Terminated', value: 'Terminated' }
-      ],
+      filterOptions: statuses.map(s => ({ label: s, value: s })),
       render: (value: string) => (
         <Badge className={getStatusColor(value)}>
           {value}
         </Badge>
       )
     },
-    { key: 'location', header: 'Location', searchable: true }
+    { key: 'startDate', header: 'Start Date', sortable: true },
   ];
 
   const actions: TableAction[] = [
     {
       label: 'View',
       icon: <Eye className="h-4 w-4" />,
-      onClick: (row: Employee) => {
-        setSelectedEmployee(row);
-        setActiveTab('profile');
-      },
+      onClick: handleViewEmployee,
       variant: 'ghost'
     },
     {
       label: 'Edit',
       icon: <Edit className="h-4 w-4" />,
-      onClick: (row: Employee) => handleEditEmployee(row),
+      onClick: handleEditEmployee,
       variant: 'ghost'
     },
     {
@@ -222,8 +224,16 @@ const EmployeeCentral: React.FC = () => {
     }
   ];
 
+  const stats = useMemo(() => ({
+    total: employees.length,
+    active: employees.filter(e => e.status === 'Active').length,
+    onLeave: employees.filter(e => e.status === 'On Leave').length,
+    inactive: employees.filter(e => e.status === 'Inactive' || e.status === 'Terminated').length,
+    departments: new Set(employees.map(e => e.department)).size
+  }), [employees]);
+
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div className="flex items-center mb-4">
         <Button 
           variant="outline" 
@@ -251,39 +261,35 @@ const EmployeeCentral: React.FC = () => {
         detailLevel="advanced"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{employees.length}</div>
-            <div className="text-sm text-muted-foreground">Total Employees</div>
-            <div className="text-sm text-blue-600">Active workforce</div>
+            <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
+            <div className="text-sm text-blue-600">Total Employees</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {employees.filter(e => e.status === 'Active').length}
-            </div>
-            <div className="text-sm text-muted-foreground">Active Employees</div>
-            <div className="text-sm text-green-600">Currently working</div>
+            <div className="text-2xl font-bold text-green-700">{stats.active}</div>
+            <div className="text-sm text-green-600">Active</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {employees.filter(e => e.status === 'On Leave').length}
-            </div>
-            <div className="text-sm text-muted-foreground">On Leave</div>
-            <div className="text-sm text-yellow-600">Temporarily away</div>
+            <div className="text-2xl font-bold text-yellow-700">{stats.onLeave}</div>
+            <div className="text-sm text-yellow-600">On Leave</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {new Set(employees.map(e => e.department)).size}
-            </div>
-            <div className="text-sm text-muted-foreground">Departments</div>
-            <div className="text-sm text-purple-600">Organizational units</div>
+            <div className="text-2xl font-bold text-gray-700">{stats.inactive}</div>
+            <div className="text-sm text-gray-600">Inactive</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-700">{stats.departments}</div>
+            <div className="text-sm text-purple-600">Departments</div>
           </CardContent>
         </Card>
       </div>
@@ -291,31 +297,43 @@ const EmployeeCentral: React.FC = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="employees">Employees</TabsTrigger>
-          <TabsTrigger value="profile">Employee Profile</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="employees" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                Employee Directory
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Employee Directory ({filteredEmployees.length})
+              </CardTitle>
+              <div className="flex flex-col md:flex-row gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search employees..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full md:w-64"
+                  />
+                </div>
                 <Button onClick={handleCreateEmployee}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Employee
                 </Button>
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent>
               <EnhancedDataTable 
                 columns={columns}
-                data={employees}
+                data={filteredEmployees}
                 actions={actions}
                 searchPlaceholder="Search employees..."
                 exportable={true}
                 refreshable={true}
-                onRefresh={loadEmployees}
+                pageSize={10}
               />
             </CardContent>
           </Card>
@@ -325,75 +343,127 @@ const EmployeeCentral: React.FC = () => {
           {selectedEmployee ? (
             <div className="space-y-4">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    {selectedEmployee.firstName} {selectedEmployee.lastName}
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-start gap-4">
+                  <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold">
+                    {selectedEmployee.firstName[0]}{selectedEmployee.lastName[0]}
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl">{selectedEmployee.firstName} {selectedEmployee.lastName}</CardTitle>
+                    <p className="text-muted-foreground">{selectedEmployee.position} - {selectedEmployee.department}</p>
+                    <div className="flex gap-2 mt-2">
+                      <Badge className={getStatusColor(selectedEmployee.status)}>{selectedEmployee.status}</Badge>
+                      <Badge variant="outline">{selectedEmployee.employeeType}</Badge>
+                      <Badge variant="outline">{selectedEmployee.location}</Badge>
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={() => handleEditEmployee(selectedEmployee)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label>Employee ID</Label>
-                      <div className="font-medium">{selectedEmployee.employeeId}</div>
-                    </div>
-                    <div>
-                      <Label>Position</Label>
-                      <div>{selectedEmployee.position}</div>
-                    </div>
-                    <div>
-                      <Label>Department</Label>
-                      <div>{selectedEmployee.department}</div>
-                    </div>
-                    <div>
-                      <Label>Status</Label>
-                      <Badge className={getStatusColor(selectedEmployee.status)}>
-                        {selectedEmployee.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Email</Label>
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2" />
-                        {selectedEmployee.email}
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Phone</Label>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2" />
-                        {selectedEmployee.phone}
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Location</Label>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {selectedEmployee.location}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
-                    <div>
-                      <Label>Skills</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedEmployee.skills.map((skill, index) => (
-                          <Badge key={index} variant="outline">{skill}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
               </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Personal Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-muted-foreground">Employee ID</Label><div className="font-medium">{selectedEmployee.employeeId}</div></div>
+                      <div><Label className="text-muted-foreground">Date of Birth</Label><div className="font-medium">{selectedEmployee.dateOfBirth || 'N/A'}</div></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-muted-foreground">Email</Label><div className="font-medium flex items-center gap-1"><Mail className="h-3 w-3" />{selectedEmployee.email}</div></div>
+                      <div><Label className="text-muted-foreground">Phone</Label><div className="font-medium flex items-center gap-1"><Phone className="h-3 w-3" />{selectedEmployee.phone}</div></div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Address</Label>
+                      <div className="font-medium flex items-center gap-1"><MapPin className="h-3 w-3" />
+                        {selectedEmployee.address?.street ? `${selectedEmployee.address.street}, ${selectedEmployee.address.city}, ${selectedEmployee.address.state} ${selectedEmployee.address.zipCode}` : 'N/A'}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Briefcase className="h-5 w-5" />
+                      Employment Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-muted-foreground">Department</Label><div className="font-medium">{selectedEmployee.department}</div></div>
+                      <div><Label className="text-muted-foreground">Position</Label><div className="font-medium">{selectedEmployee.position}</div></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-muted-foreground">Manager</Label><div className="font-medium">{selectedEmployee.manager || 'N/A'}</div></div>
+                      <div><Label className="text-muted-foreground">Work Schedule</Label><div className="font-medium">{selectedEmployee.workSchedule}</div></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-muted-foreground">Hire Date</Label><div className="font-medium flex items-center gap-1"><Calendar className="h-3 w-3" />{selectedEmployee.hireDate}</div></div>
+                      <div><Label className="text-muted-foreground">Salary</Label><div className="font-medium">${selectedEmployee.salary?.toLocaleString()}</div></div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Award className="h-5 w-5" />
+                      Skills & Certifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-muted-foreground">Skills</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedEmployee.skills?.length > 0 ? (
+                          selectedEmployee.skills.map((skill, i) => (
+                            <Badge key={i} variant="outline" className="bg-blue-50">{skill}</Badge>
+                          ))
+                        ) : <span className="text-muted-foreground">No skills listed</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Certifications</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedEmployee.certifications?.length > 0 ? (
+                          selectedEmployee.certifications.map((cert, i) => (
+                            <Badge key={i} variant="outline" className="bg-green-50">{cert}</Badge>
+                          ))
+                        ) : <span className="text-muted-foreground">No certifications</span>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Phone className="h-5 w-5" />
+                      Emergency Contact
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div><Label className="text-muted-foreground">Name</Label><div className="font-medium">{selectedEmployee.emergencyContact?.name || 'N/A'}</div></div>
+                    <div><Label className="text-muted-foreground">Phone</Label><div className="font-medium">{selectedEmployee.emergencyContact?.phone || 'N/A'}</div></div>
+                    <div><Label className="text-muted-foreground">Relationship</Label><div className="font-medium">{selectedEmployee.emergencyContact?.relationship || 'N/A'}</div></div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">Select an employee to view profile</p>
+              <CardContent className="p-12 text-center">
+                <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground text-lg">Select an employee to view their profile</p>
+                <Button className="mt-4" onClick={() => setActiveTab('employees')}>Go to Employee List</Button>
               </CardContent>
             </Card>
           )}
@@ -402,30 +472,40 @@ const EmployeeCentral: React.FC = () => {
         <TabsContent value="organization" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Organization Structure</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Organization Structure
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Array.from(new Set(employees.map(e => e.department))).map((dept) => {
+                {departments.map((dept) => {
                   const deptEmployees = employees.filter(e => e.department === dept);
+                  if (deptEmployees.length === 0) return null;
                   return (
-                    <div key={dept} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Building className="h-5 w-5 mr-2" />
+                    <div key={dept} className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
                           <h4 className="font-semibold">{dept}</h4>
                         </div>
                         <Badge variant="outline">{deptEmployees.length} employees</Badge>
                       </div>
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {deptEmployees.slice(0, 4).map((emp) => (
-                          <div key={emp.id} className="text-sm text-muted-foreground">
-                            • {emp.firstName} {emp.lastName} - {emp.position}
+                      <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {deptEmployees.slice(0, 6).map((emp) => (
+                          <div key={emp.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/30 cursor-pointer" onClick={() => handleViewEmployee(emp)}>
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
+                              {emp.firstName[0]}{emp.lastName[0]}
+                            </div>
+                            <div className="text-sm">
+                              <div className="font-medium">{emp.firstName} {emp.lastName}</div>
+                              <div className="text-muted-foreground text-xs">{emp.position}</div>
+                            </div>
                           </div>
                         ))}
-                        {deptEmployees.length > 4 && (
-                          <div className="text-sm text-muted-foreground">
-                            ... and {deptEmployees.length - 4} more
+                        {deptEmployees.length > 6 && (
+                          <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
+                            +{deptEmployees.length - 6} more
                           </div>
                         )}
                       </div>
@@ -441,16 +521,23 @@ const EmployeeCentral: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Employee Distribution</CardTitle>
+                <CardTitle>Employee Distribution by Department</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {Array.from(new Set(employees.map(e => e.department))).map((dept) => {
+                <div className="space-y-3">
+                  {departments.map((dept) => {
                     const count = employees.filter(e => e.department === dept).length;
+                    const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+                    if (count === 0) return null;
                     return (
-                      <div key={dept} className="flex justify-between">
-                        <span>{dept}</span>
-                        <span className="font-medium">{count}</span>
+                      <div key={dept} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>{dept}</span>
+                          <span className="font-medium">{count} ({pct}%)</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
                     );
                   })}
@@ -463,12 +550,56 @@ const EmployeeCentral: React.FC = () => {
                 <CardTitle>Employment Types</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {['Full-time', 'Part-time', 'Contract', 'Intern'].map((type) => {
+                <div className="space-y-3">
+                  {employeeTypes.map((type) => {
                     const count = employees.filter(e => e.employeeType === type).length;
+                    const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
                     return (
-                      <div key={type} className="flex justify-between">
-                        <span>{type}</span>
+                      <div key={type} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>{type}</span>
+                          <span className="font-medium">{count} ({pct}%)</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Location Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {Array.from(new Set(employees.map(e => e.location))).slice(0, 8).map((loc) => {
+                    const count = employees.filter(e => e.location === loc).length;
+                    return (
+                      <div key={loc} className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{loc}</span>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Status Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {statuses.map((status) => {
+                    const count = employees.filter(e => e.status === status).length;
+                    return (
+                      <div key={status} className="flex justify-between text-sm items-center">
+                        <Badge className={getStatusColor(status)}>{status}</Badge>
                         <span className="font-medium">{count}</span>
                       </div>
                     );
@@ -481,7 +612,7 @@ const EmployeeCentral: React.FC = () => {
       </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
           </DialogHeader>
@@ -513,93 +644,195 @@ const EmployeeForm: React.FC<{
     status: employee?.status || 'Active',
     employeeType: employee?.employeeType || 'Full-time',
     startDate: employee?.startDate || new Date().toISOString().split('T')[0],
-    salary: employee?.salary || 0
+    salary: employee?.salary || 50000,
+    dateOfBirth: employee?.dateOfBirth || '',
+    skills: employee?.skills?.join(', ') || '',
+    certifications: employee?.certifications?.join(', ') || '',
+    emergencyName: employee?.emergencyContact?.name || '',
+    emergencyPhone: employee?.emergencyContact?.phone || '',
+    emergencyRelation: employee?.emergencyContact?.relationship || '',
+    street: employee?.address?.street || '',
+    city: employee?.address?.city || '',
+    state: employee?.address?.state || '',
+    zipCode: employee?.address?.zipCode || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    onSave({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      position: formData.position,
+      department: formData.department,
+      manager: formData.manager,
+      location: formData.location,
+      status: formData.status as Employee['status'],
+      employeeType: formData.employeeType as Employee['employeeType'],
+      startDate: formData.startDate,
+      salary: Number(formData.salary),
+      dateOfBirth: formData.dateOfBirth,
+      skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
+      certifications: formData.certifications.split(',').map(s => s.trim()).filter(Boolean),
+      emergencyContact: {
+        name: formData.emergencyName,
+        phone: formData.emergencyPhone,
+        relationship: formData.emergencyRelation
+      },
+      address: {
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: 'USA'
+      }
+    });
+  };
+
+  const updateField = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="firstName">First Name</Label>
-          <Input
-            id="firstName"
-            value={formData.firstName}
-            onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-            required
-          />
+          <Label htmlFor="firstName">First Name *</Label>
+          <Input id="firstName" value={formData.firstName} onChange={e => updateField('firstName', e.target.value)} required />
         </div>
         <div>
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input
-            id="lastName"
-            value={formData.lastName}
-            onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-            required
-          />
+          <Label htmlFor="lastName">Last Name *</Label>
+          <Input id="lastName" value={formData.lastName} onChange={e => updateField('lastName', e.target.value)} required />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            required
-          />
+          <Label htmlFor="email">Email *</Label>
+          <Input id="email" type="email" value={formData.email} onChange={e => updateField('email', e.target.value)} required />
         </div>
         <div>
           <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-          />
+          <Input id="phone" value={formData.phone} onChange={e => updateField('phone', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="position">Position</Label>
-          <Input
-            id="position"
-            value={formData.position}
-            onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-            required
-          />
+          <Label htmlFor="position">Position *</Label>
+          <Input id="position" value={formData.position} onChange={e => updateField('position', e.target.value)} required />
         </div>
         <div>
           <Label htmlFor="department">Department</Label>
-          <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select department" />
-            </SelectTrigger>
+          <Select value={formData.department} onValueChange={v => updateField('department', v)}>
+            <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Information Technology">Information Technology</SelectItem>
-              <SelectItem value="Human Resources">Human Resources</SelectItem>
-              <SelectItem value="Finance">Finance</SelectItem>
-              <SelectItem value="Sales">Sales</SelectItem>
-              <SelectItem value="Marketing">Marketing</SelectItem>
+              {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          {employee ? 'Update' : 'Create'} Employee
-        </Button>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="manager">Manager</Label>
+          <Input id="manager" value={formData.manager} onChange={e => updateField('manager', e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="location">Location</Label>
+          <Select value={formData.location} onValueChange={v => updateField('location', v)}>
+            <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+            <SelectContent>
+              {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select value={formData.status} onValueChange={v => updateField('status', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="employeeType">Employment Type</Label>
+          <Select value={formData.employeeType} onValueChange={v => updateField('employeeType', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {employeeTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input id="startDate" type="date" value={formData.startDate} onChange={e => updateField('startDate', e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="salary">Annual Salary</Label>
+          <Input id="salary" type="number" value={formData.salary} onChange={e => updateField('salary', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <Input id="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={e => updateField('dateOfBirth', e.target.value)} />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="skills">Skills (comma-separated)</Label>
+        <Input id="skills" value={formData.skills} onChange={e => updateField('skills', e.target.value)} placeholder="JavaScript, React, Node.js" />
+      </div>
+
+      <div>
+        <Label htmlFor="certifications">Certifications (comma-separated)</Label>
+        <Input id="certifications" value={formData.certifications} onChange={e => updateField('certifications', e.target.value)} placeholder="AWS Certified, PMP" />
+      </div>
+
+      <div className="border-t pt-4">
+        <h4 className="font-medium mb-2">Emergency Contact</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="emergencyName">Name</Label>
+            <Input id="emergencyName" value={formData.emergencyName} onChange={e => updateField('emergencyName', e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="emergencyPhone">Phone</Label>
+            <Input id="emergencyPhone" value={formData.emergencyPhone} onChange={e => updateField('emergencyPhone', e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="emergencyRelation">Relationship</Label>
+            <Input id="emergencyRelation" value={formData.emergencyRelation} onChange={e => updateField('emergencyRelation', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t pt-4">
+        <h4 className="font-medium mb-2">Address</h4>
+        <div className="space-y-2">
+          <Input placeholder="Street Address" value={formData.street} onChange={e => updateField('street', e.target.value)} />
+          <div className="grid grid-cols-3 gap-2">
+            <Input placeholder="City" value={formData.city} onChange={e => updateField('city', e.target.value)} />
+            <Input placeholder="State" value={formData.state} onChange={e => updateField('state', e.target.value)} />
+            <Input placeholder="ZIP Code" value={formData.zipCode} onChange={e => updateField('zipCode', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">{employee ? 'Update' : 'Create'} Employee</Button>
+      </DialogFooter>
     </form>
   );
 };

@@ -28,7 +28,9 @@ const ProcurementRoutes: React.FC = () => {
       <Route path="/supplier-management" element={<SupplierManagement />} />
       <Route path="/supplier-management/:supplierId" element={<SupplierDetail />} />
       <Route path="/suppliers" element={<SupplierManagement />} />
+      <Route path="/supplier-performance" element={<SupplierPerformance />} />
       <Route path="/contract-management" element={<ContractManagement />} />
+      <Route path="/contracts" element={<ContractManagement />} />
       <Route path="/source-determination" element={<SourceDetermination />} />
       <Route path="/source-list" element={<SourceDetermination />} />
       <Route path="/goods-receipt" element={<GoodsReceipt />} />
@@ -36,8 +38,8 @@ const ProcurementRoutes: React.FC = () => {
       <Route path="/bidding-auctions" element={<BiddingAuctions />} />
       <Route path="/analytics" element={<ProcurementAnalytics />} />
       <Route path="/catalog-management" element={<CatalogManagement />} />
+      <Route path="/catalog" element={<CatalogManagement />} />
       <Route path="/spend-analysis" element={<SpendAnalysis />} />
-      <Route path="/supplier-performance" element={<SupplierPerformance />} />
     </Routes>
   );
 };

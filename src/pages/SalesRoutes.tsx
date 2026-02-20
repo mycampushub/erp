@@ -23,12 +23,18 @@ const SalesRoutes: React.FC = () => {
     <Routes>
       <Route path="/" element={<Sales />} />
       <Route path="/sales-orders" element={<SalesOrders />} />
+      <Route path="/orders" element={<SalesOrders />} />
       <Route path="/quotations" element={<QuotationManagement />} />
       <Route path="/customer-management" element={<CustomerManagement />} />
+      <Route path="/customers" element={<CustomerManagement />} />
       <Route path="/pricing-management" element={<PricingManagement />} />
+      <Route path="/pricing" element={<PricingManagement />} />
       <Route path="/product-catalog" element={<ProductCatalog />} />
+      <Route path="/products" element={<ProductCatalog />} />
       <Route path="/credit-management" element={<CreditManagement />} />
+      <Route path="/credit" element={<CreditManagement />} />
       <Route path="/sales-analytics" element={<SalesAnalytics />} />
+      <Route path="/analytics" element={<SalesAnalytics />} />
       <Route path="/billing" element={<BillingDocuments />} />
       <Route path="/billing-documents" element={<BillingDocuments />} />
       <Route path="/sales-contracts" element={<SalesContracts />} />
@@ -37,6 +43,7 @@ const SalesRoutes: React.FC = () => {
       <Route path="/returns" element={<SalesReturns />} />
       <Route path="/commission" element={<Commission />} />
       <Route path="/territory-management" element={<TerritoryManagement />} />
+      <Route path="/territory" element={<TerritoryManagement />} />
       <Route path="/customer/:customerId" element={<CustomerDetail />} />
       <Route path="/sales-order/:orderId" element={<SalesOrderDetail />} />
       <Route path="/product/:productId" element={<ProductDetail />} />

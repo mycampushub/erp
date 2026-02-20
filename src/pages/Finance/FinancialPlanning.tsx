@@ -4,8 +4,9 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, Eye, Download, Filter, Target, DollarSign, TrendingUp, BarChart } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Eye, Download, Filter, Target, DollarSign, TrendingUp, BarChart, Save } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import DataTable, { Column } from '../../components/data/DataTable';
 import { Badge } from '../../components/ui/badge';
@@ -14,6 +15,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
+import { useToast } from '../../hooks/use-toast';
+import VoiceTrainingComponent from '../../components/procurement/VoiceTrainingComponent';
 
 const FinancialPlanning: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +25,19 @@ const FinancialPlanning: React.FC = () => {
   const [activeTab, setActiveTab] = useState('budgets');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedBudget, setSelectedBudget] = useState(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCreateForecastOpen, setIsCreateForecastOpen] = useState(false);
+  const [isCreateInitiativeOpen, setIsCreateInitiativeOpen] = useState(false);
+  const [isViewForecastOpen, setIsViewForecastOpen] = useState(false);
+  const [isViewInitiativeOpen, setIsViewInitiativeOpen] = useState(false);
+  const [selectedBudget, setSelectedBudget] = useState<any>(null);
+  const [selectedForecast, setSelectedForecast] = useState<any>(null);
+  const [selectedPlanning, setSelectedPlanning] = useState<any>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [budgetFilter, setBudgetFilter] = useState('');
+  const [forecastFilter, setForecastFilter] = useState('');
+  const [planningFilter, setPlanningFilter] = useState('');
+  const { toast } = useToast();
 
   const form = useForm({
     defaultValues: {
@@ -145,7 +160,81 @@ const FinancialPlanning: React.FC = () => {
 
   const handleDelete = (id: string) => {
     setBudgets(budgets.filter(b => b.id !== id));
+    toast({ title: 'Budget Deleted', description: 'The budget has been deleted successfully.' });
   };
+
+  const handleView = (budget: any) => {
+    setSelectedBudget(budget);
+    setIsViewDialogOpen(true);
+    toast({ title: 'View Budget', description: `Viewing details for ${budget.budgetName}` });
+  };
+
+  const handleViewForecast = (row: any) => {
+    setSelectedForecast(row);
+    setIsViewForecastOpen(true);
+  };
+
+  const handleExportForecast = (row: any) => {
+    const data = [row];
+    const headers = ['Scenario', 'Period', 'Revenue', 'Expenses', 'Profit', 'Margin %', 'Confidence'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(r => `${r.scenario},${r.period},${r.revenue},${r.expenses},${r.profit},${r.margin}%,${r.confidence}%`)
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `forecast_${row.scenario}_${row.period}.csv`;
+    link.click();
+    toast({ title: 'Export Complete', description: 'Forecast data exported successfully.' });
+  };
+
+  const handleViewPlanning = (row: any) => {
+    setSelectedPlanning(row);
+    setIsViewInitiativeOpen(true);
+  };
+
+  const handleExportPlanning = (row: any) => {
+    const data = [row];
+    const headers = ['Initiative', 'Category', 'Budget', 'Timeline', 'ROI %', 'Priority', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(r => `${r.initiative},${r.category},${r.budget},${r.timeline},${r.roi}%,${r.priority},${r.status}`)
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `initiative_${row.initiative.replace(/\s+/g, '_')}.csv`;
+    link.click();
+    toast({ title: 'Export Complete', description: 'Initiative data exported successfully.' });
+  };
+
+  const handleToggleFilter = () => {
+    setFilterOpen(!filterOpen);
+    toast({ title: filterOpen ? 'Filter Closed' : 'Filter Open', description: filterOpen ? 'Showing all records' : 'Use filters to narrow down results' });
+  };
+
+  const filteredBudgets = budgets.filter(b => 
+    budgetFilter === '' || 
+    b.budgetName.toLowerCase().includes(budgetFilter.toLowerCase()) ||
+    b.department.toLowerCase().includes(budgetFilter.toLowerCase()) ||
+    b.period.includes(budgetFilter)
+  );
+
+  const filteredForecasts = forecasts.filter(f => 
+    forecastFilter === '' || 
+    f.scenario.toLowerCase().includes(forecastFilter.toLowerCase()) ||
+    f.period.includes(forecastFilter)
+  );
+
+  const filteredPlanning = planning.filter(p => 
+    planningFilter === '' || 
+    p.initiative.toLowerCase().includes(planningFilter.toLowerCase()) ||
+    p.category.toLowerCase().includes(planningFilter.toLowerCase()) ||
+    p.status.toLowerCase().includes(planningFilter.toLowerCase())
+  );
 
   const budgetColumns: Column[] = [
     { key: 'budgetName', header: 'Budget Name' },
@@ -180,7 +269,7 @@ const FinancialPlanning: React.FC = () => {
       header: 'Actions',
       render: (_, row) => (
         <div className="flex space-x-1">
-          <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handleView(row)}><Eye className="h-4 w-4" /></Button>
           <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}><Edit className="h-4 w-4" /></Button>
           <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id)}><Trash2 className="h-4 w-4" /></Button>
         </div>
@@ -221,9 +310,8 @@ const FinancialPlanning: React.FC = () => {
       header: 'Actions',
       render: (_, row) => (
         <div className="flex space-x-1">
-          <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handleViewForecast(row)}><Eye className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handleExportForecast(row)}><Download className="h-4 w-4" /></Button>
         </div>
       )
     }
@@ -272,9 +360,8 @@ const FinancialPlanning: React.FC = () => {
       header: 'Actions',
       render: (_, row) => (
         <div className="flex space-x-1">
-          <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handleViewPlanning(row)}><Eye className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handleExportPlanning(row)}><Download className="h-4 w-4" /></Button>
         </div>
       )
     }
@@ -297,6 +384,17 @@ const FinancialPlanning: React.FC = () => {
           voiceIntroduction="Welcome to Financial Planning. Manage your budgets, forecasts, and strategic initiatives."
         />
       </div>
+
+      <VoiceTrainingComponent 
+        module="finance"
+        topic="Financial Planning and Analysis"
+        examples={[
+          "Creating annual budgets with departmental allocations and quarterly review processes for financial control",
+          "Generating financial forecasts with multiple scenarios including base, optimistic, and conservative cases",
+          "Managing strategic initiatives with ROI analysis and resource allocation for long-term planning"
+        ]}
+        detailLevel="advanced"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
@@ -359,7 +457,7 @@ const FinancialPlanning: React.FC = () => {
               <div className="flex justify-between items-center">
                 <CardTitle>Budget Management</CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant={filterOpen ? "default" : "outline"} size="sm" onClick={handleToggleFilter}>
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
                   </Button>
@@ -480,7 +578,17 @@ const FinancialPlanning: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <DataTable columns={budgetColumns} data={budgets} />
+              {filterOpen && (
+                <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                  <Input
+                    placeholder="Search by name, department, or period..."
+                    value={budgetFilter}
+                    onChange={(e) => setBudgetFilter(e.target.value)}
+                    className="max-w-md"
+                  />
+                </div>
+              )}
+              <DataTable columns={budgetColumns} data={filteredBudgets} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -490,14 +598,82 @@ const FinancialPlanning: React.FC = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Financial Forecasts</CardTitle>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Forecast
-                </Button>
+                <Dialog open={isCreateForecastOpen} onOpenChange={setIsCreateForecastOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Forecast
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Forecast</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Scenario</Label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select scenario" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Base Case">Base Case</SelectItem>
+                            <SelectItem value="Optimistic">Optimistic</SelectItem>
+                            <SelectItem value="Conservative">Conservative</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Period</Label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select period" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2024-Q3">2024 Q3</SelectItem>
+                            <SelectItem value="2024-Q4">2024 Q4</SelectItem>
+                            <SelectItem value="2025-Q1">2025 Q1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Projected Revenue</Label>
+                        <Input type="number" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <Label>Projected Expenses</Label>
+                        <Input type="number" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <Label>Confidence Level (%)</Label>
+                        <Input type="number" placeholder="0-100" />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateForecastOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" onClick={() => {
+                          toast({ title: 'Forecast Created', description: 'New forecast created successfully.' });
+                          setIsCreateForecastOpen(false);
+                        }}>
+                          Create Forecast
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <DataTable columns={forecastColumns} data={forecasts} />
+              <div className="mb-4">
+                <Input
+                  placeholder="Search forecasts..."
+                  value={forecastFilter}
+                  onChange={(e) => setForecastFilter(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
+              <DataTable columns={forecastColumns} data={filteredForecasts} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -507,14 +683,87 @@ const FinancialPlanning: React.FC = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Strategic Initiatives</CardTitle>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Initiative
-                </Button>
+                <Dialog open={isCreateInitiativeOpen} onOpenChange={setIsCreateInitiativeOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Initiative
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Initiative</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Initiative Name</Label>
+                        <Input placeholder="e.g., Digital Transformation" />
+                      </div>
+                      <div>
+                        <Label>Category</Label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Strategic">Strategic</SelectItem>
+                            <SelectItem value="Growth">Growth</SelectItem>
+                            <SelectItem value="Efficiency">Efficiency</SelectItem>
+                            <SelectItem value="Innovation">Innovation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Budget</Label>
+                        <Input type="number" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <Label>Timeline</Label>
+                        <Input placeholder="e.g., 12 months" />
+                      </div>
+                      <div>
+                        <Label>Expected ROI (%)</Label>
+                        <Input type="number" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <Label>Priority</Label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="High">High</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Low">Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateInitiativeOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" onClick={() => {
+                          toast({ title: 'Initiative Created', description: 'New strategic initiative created successfully.' });
+                          setIsCreateInitiativeOpen(false);
+                        }}>
+                          Create Initiative
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <DataTable columns={planningColumns} data={planning} />
+              <div className="mb-4">
+                <Input
+                  placeholder="Search initiatives..."
+                  value={planningFilter}
+                  onChange={(e) => setPlanningFilter(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
+              <DataTable columns={planningColumns} data={filteredPlanning} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -680,6 +929,94 @@ const FinancialPlanning: React.FC = () => {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewForecastOpen} onOpenChange={setIsViewForecastOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Forecast Details</DialogTitle>
+          </DialogHeader>
+          {selectedForecast && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Scenario</Label>
+                  <p className="font-medium">{selectedForecast.scenario}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Period</Label>
+                  <p className="font-medium">{selectedForecast.period}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Revenue</Label>
+                  <p className="font-medium">${selectedForecast.revenue?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Expenses</Label>
+                  <p className="font-medium">${selectedForecast.expenses?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Profit</Label>
+                  <p className="font-medium text-green-600">${selectedForecast.profit?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Margin</Label>
+                  <p className="font-medium">{selectedForecast.margin?.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Confidence</Label>
+                  <p className="font-medium">{selectedForecast.confidence}%</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewInitiativeOpen} onOpenChange={setIsViewInitiativeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Initiative Details</DialogTitle>
+          </DialogHeader>
+          {selectedPlanning && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Initiative</Label>
+                  <p className="font-medium">{selectedPlanning.initiative}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Category</Label>
+                  <p className="font-medium">{selectedPlanning.category}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Budget</Label>
+                  <p className="font-medium">${selectedPlanning.budget?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Timeline</Label>
+                  <p className="font-medium">{selectedPlanning.timeline}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Expected ROI</Label>
+                  <p className="font-medium">{selectedPlanning.roi?.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Priority</Label>
+                  <Badge variant={selectedPlanning.priority === 'High' ? 'destructive' : 'secondary'}>
+                    {selectedPlanning.priority}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <Badge variant={selectedPlanning.status === 'Approved' ? 'default' : 'secondary'}>
+                    {selectedPlanning.status}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

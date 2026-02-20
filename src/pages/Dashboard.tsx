@@ -19,8 +19,8 @@ const Dashboard: React.FC = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold tracking-tight">SAP S/4HANA Dashboard</h1>
-        <div className="text-sm text-gray-500">
-          Last updated: May 21, 2025, 10:30 AM
+<div className="text-sm text-gray-500">
+          Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
       
@@ -180,12 +180,12 @@ const Dashboard: React.FC = () => {
               <span>Supplier Management</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Package className="h-3 w-3" />
-              <span>Inventory Management</span>
+              <Truck className="h-3 w-3" />
+              <span>Distribution Planning</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Truck className="h-3 w-3" />
-              <span>Transportation</span>
+              <Package className="h-3 w-3" />
+              <span>Warehouse Management</span>
             </div>
           </div>
         </Card>

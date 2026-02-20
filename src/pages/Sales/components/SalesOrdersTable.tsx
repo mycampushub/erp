@@ -35,11 +35,27 @@ const SalesOrdersTable: React.FC<SalesOrdersTableProps> = ({ isLoading, salesFil
     });
   };
   
+  // Handle viewing customer details
+  const handleViewCustomerDetails = (customerName: string) => {
+    toast({
+      title: "Opening customer details",
+      description: `Viewing details for customer ${customerName}`,
+    });
+  };
+  
   // Handle viewing order details
   const handleViewOrderDetails = (orderId: string) => {
     toast({
       title: "Opening order details",
       description: `Viewing details for order ${orderId}`,
+    });
+  };
+
+  // Handle downloading invoice
+  const handleDownloadInvoice = (orderId: string) => {
+    toast({
+      title: "Downloading invoice",
+      description: `Invoice for order ${orderId} downloaded.`,
     });
   };
   
@@ -67,7 +83,12 @@ const SalesOrdersTable: React.FC<SalesOrdersTableProps> = ({ isLoading, salesFil
       key: "customer", 
       header: "Customer",
       render: (value: string) => (
-        <span className="text-blue-600 underline cursor-pointer">{value}</span>
+        <span 
+          className="text-blue-600 underline cursor-pointer hover:text-blue-800"
+          onClick={() => handleViewCustomerDetails(value)}
+        >
+          {value}
+        </span>
       )
     },
     { key: "value", header: "Value" },
@@ -102,6 +123,7 @@ const SalesOrdersTable: React.FC<SalesOrdersTableProps> = ({ isLoading, salesFil
             variant="ghost" 
             size="sm"
             className="h-8 w-8 p-0"
+            onClick={() => handleDownloadInvoice(row.id)}
           >
             <FileText className="h-4 w-4" />
           </Button>
@@ -141,10 +163,31 @@ const SalesOrdersTable: React.FC<SalesOrdersTableProps> = ({ isLoading, salesFil
       <div className="mt-4 text-xs text-gray-500 flex justify-between items-center">
         <span>Showing {recentSalesOrders.filter(order => salesFilter === 'All' || order.status === salesFilter).length} orders</span>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-6 text-xs">Previous</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-6 text-xs"
+            onClick={() => toast({ description: 'Navigating to previous page' })}
+          >
+            Previous
+          </Button>
           <Button variant="outline" size="sm" className="h-6 text-xs bg-blue-50 text-blue-700">1</Button>
-          <Button variant="outline" size="sm" className="h-6 text-xs">2</Button>
-          <Button variant="outline" size="sm" className="h-6 text-xs">Next</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-6 text-xs"
+            onClick={() => toast({ description: 'Navigating to page 2' })}
+          >
+            2
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-6 text-xs"
+            onClick={() => toast({ description: 'Navigating to next page' })}
+          >
+            Next
+          </Button>
         </div>
       </div>
     </div>

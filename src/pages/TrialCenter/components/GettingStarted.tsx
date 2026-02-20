@@ -1,8 +1,11 @@
 
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const GettingStarted: React.FC = () => {
+  const navigate = useNavigate();
+  
   return (
     <div className="col-span-full">
       <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg">
@@ -23,7 +26,10 @@ const GettingStarted: React.FC = () => {
               Explore the system interface and navigation to get familiar with the basic structure.
             </p>
             <div className="text-center">
-              <button className="text-blue-600 text-sm flex items-center mx-auto">
+              <button 
+                className="text-blue-600 text-sm flex items-center mx-auto hover:text-blue-800"
+                onClick={() => alert('Starting system orientation tour...')}
+              >
                 Start Tour <ChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -40,7 +46,10 @@ const GettingStarted: React.FC = () => {
               Complete the basic tutorials to learn essential functions and workflows.
             </p>
             <div className="text-center">
-              <button className="text-blue-600 text-sm flex items-center mx-auto">
+              <button 
+                className="text-blue-600 text-sm flex items-center mx-auto hover:text-blue-800"
+                onClick={() => navigate('/trial-center')}
+              >
                 View Tutorials <ChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -57,7 +66,10 @@ const GettingStarted: React.FC = () => {
               Test different modules and features in the sandbox environment.
             </p>
             <div className="text-center">
-              <button className="text-blue-600 text-sm flex items-center mx-auto">
+              <button 
+                className="text-blue-600 text-sm flex items-center mx-auto hover:text-blue-800"
+                onClick={() => navigate('/manufacturing')}
+              >
                 Open Sandbox <ChevronRight className="h-4 w-4" />
               </button>
             </div>
