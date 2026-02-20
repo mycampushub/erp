@@ -1,155 +1,226 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ArrowLeft, MessageSquare, Video, Share2, Users, Bell, Calendar } from 'lucide-react';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useToast } from '../../hooks/use-toast';
+import { ArrowLeft, MessageSquare, Video, Share2, Users, Bell, Calendar, Plus, Edit, Trash2, FileText, Mail, CheckCircle } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
-import DataTable from '../../components/data/DataTable';
-
-const teamCommunications = [
-  { 
-    id: 'MSG-001', 
-    type: 'Message', 
-    subject: 'ERP Implementation Update', 
-    from: 'John Smith',
-    project: 'ERP Implementation',
-    timestamp: '2025-05-31 10:30',
-    status: 'Read'
-  },
-  { 
-    id: 'MTG-001', 
-    type: 'Meeting', 
-    subject: 'Weekly Status Review', 
-    from: 'Emma Wilson',
-    project: 'Website Redesign',
-    timestamp: '2025-05-31 14:00',
-    status: 'Scheduled'
-  },
-  { 
-    id: 'DOC-001', 
-    type: 'Document', 
-    subject: 'Technical Specification v2.0', 
-    from: 'Mike Johnson',
-    project: 'Mobile App',
-    timestamp: '2025-05-30 16:45',
-    status: 'Shared'
-  },
-];
-
-const upcomingMeetings = [
-  { title: 'Sprint Planning', time: '09:00', project: 'ERP Implementation', attendees: 8 },
-  { title: 'Design Review', time: '14:00', project: 'Website Redesign', attendees: 5 },
-  { title: 'Risk Assessment', time: '16:30', project: 'Mobile App', attendees: 6 },
-];
+import { listEntities, upsertEntity, removeEntity, generateId } from '../../lib/localCrud';
+import { seedAllProjectManagementData } from '../../lib/projectManagement/seedData';
+import { CRUDDialog, EnhancedCRUDTable, StatCard, ConfirmDialog, formatDateTime, formatDate, ViewDialog } from '../../lib/projectManagement/CRUDComponents';
+import { Communication, Meeting, SharedDocument, NotificationSetting, PM_STORAGE_KEYS } from '../../lib/projectManagement/types';
 
 const Collaboration: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('communications');
+  const [communications, setCommunications] = useState<Communication[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [sharedDocs, setSharedDocs] = useState<SharedDocument[]>([]);
+  const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [dialogType, setDialogType] = useState<'communication' | 'meeting' | 'sharedoc' | 'notification'>('communication');
+  const [isEditing, setIsEditing] = useState(false);
+
+  const loadData = useCallback(() => {
+    seedAllProjectManagementData();
+    setCommunications(listEntities<Communication>(PM_STORAGE_KEYS.COMMUNICATIONS));
+    setMeetings(listEntities<Meeting>(PM_STORAGE_KEYS.MEETINGS));
+    setSharedDocs(listEntities<SharedDocument>(PM_STORAGE_KEYS.SHARED_DOCS));
+    setNotifications(listEntities<NotificationSetting>(PM_STORAGE_KEYS.NOTIFICATION_SETTINGS));
+  }, []);
 
   useEffect(() => {
-    if (isEnabled) {
-      speak('Welcome to Project Collaboration. Here you can communicate with team members, schedule meetings, share documents, and coordinate project activities.');
-    }
-  }, [isEnabled, speak]);
+    if (isEnabled) speak('Welcome to Project Collaboration. Manage communications, meetings, and document sharing.');
+    loadData();
+  }, [isEnabled, speak, loadData]);
 
-  const communicationColumns = [
-    { 
-      key: 'type', 
-      header: 'Type',
-      render: (value: string) => (
-        <Badge variant={
-          value === 'Message' ? 'default' : 
-          value === 'Meeting' ? 'secondary' : 'outline'
-        }>
-          {value}
-        </Badge>
-      )
-    },
-    { key: 'subject', header: 'Subject' },
-    { key: 'from', header: 'From' },
-    { key: 'project', header: 'Project' },
-    { key: 'timestamp', header: 'Time' },
-    { 
-      key: 'status', 
-      header: 'Status',
-      render: (value: string) => (
-        <Badge variant={
-          value === 'Read' ? 'default' : 
-          value === 'Scheduled' ? 'secondary' : 'outline'
-        }>
-          {value}
-        </Badge>
-      )
-    },
-    { 
-      key: 'actions', 
-      header: 'Actions',
-      render: () => <Button variant="outline" size="sm">View</Button>
+  const handleCRUD = (type: 'communication' | 'meeting' | 'sharedoc' | 'notification', item?: any, edit = false) => {
+    setDialogType(type);
+    setSelectedItem(item);
+    setIsEditing(edit);
+    setIsDialogOpen(true);
+  };
+
+  const handleView = (item: any, type: 'communication' | 'meeting' | 'sharedoc' | 'notification') => {
+    setSelectedItem(item);
+    setDialogType(type);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleDelete = (item: any, type: 'communication' | 'meeting' | 'sharedoc' | 'notification') => {
+    setSelectedItem(item);
+    setDialogType(type);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    let key: any = PM_STORAGE_KEYS.COMMUNICATIONS;
+    let setter: any = setCommunications;
+    if (dialogType === 'meeting') { key = PM_STORAGE_KEYS.MEETINGS; setter = setMeetings; }
+    else if (dialogType === 'sharedoc') { key = PM_STORAGE_KEYS.SHARED_DOCS; setter = setSharedDocs; }
+    else if (dialogType === 'notification') { key = PM_STORAGE_KEYS.NOTIFICATION_SETTINGS; setter = setNotifications; }
+    
+    removeEntity(key, selectedItem.id);
+    setter((prev: any[]) => prev.filter((item: any) => item.id !== selectedItem.id));
+    toast({ title: 'Deleted', description: 'Item deleted successfully', variant: 'destructive' });
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleSave = (data: any) => {
+    let key: any = PM_STORAGE_KEYS.COMMUNICATIONS;
+    let setter: any = setCommunications;
+    if (dialogType === 'meeting') { key = PM_STORAGE_KEYS.MEETINGS; setter = setMeetings; }
+    else if (dialogType === 'sharedoc') { key = PM_STORAGE_KEYS.SHARED_DOCS; setter = setSharedDocs; }
+    else if (dialogType === 'notification') { key = PM_STORAGE_KEYS.NOTIFICATION_SETTINGS; setter = setNotifications; }
+
+    if (isEditing && selectedItem) {
+      const updated = { ...selectedItem, ...data };
+      upsertEntity(key, updated);
+      setter((prev: any[]) => prev.map((item: any) => item.id === selectedItem.id ? updated : item));
+      toast({ title: 'Updated', description: 'Item updated successfully' });
+    } else {
+      const newItem = { ...data, id: generateId(dialogType === 'communication' ? 'comm' : dialogType === 'meeting' ? 'mtg' : dialogType === 'sharedoc' ? 'sd' : 'not') };
+      upsertEntity(key, newItem);
+      setter((prev: any[]) => [newItem, ...prev]);
+      toast({ title: 'Created', description: 'Item created successfully' });
     }
+    setIsDialogOpen(false);
+  };
+
+  const commColumns = [
+    { key: 'type', header: 'Type', render: (v: string) => <Badge variant={v === 'Message' ? 'default' : v === 'Email' ? 'secondary' : 'outline'}>{v}</Badge> },
+    { key: 'subject', header: 'Subject', sortable: true },
+    { key: 'from', header: 'From', sortable: true },
+    { key: 'projectId', header: 'Project' },
+    { key: 'timestamp', header: 'Time', render: (v: string) => formatDateTime(v) },
+    { key: 'readStatus', header: 'Status', render: (v: string) => <Badge variant={v === 'Read' ? 'default' : 'secondary'}>{v}</Badge> },
   ];
 
-  return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="mr-4"
-          onClick={() => navigate('/project-management')}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
-        <PageHeader
-          title="Project Collaboration"
-          description="Team communication, meetings, and document sharing"
-          voiceIntroduction="Welcome to Project Collaboration."
-        />
-      </div>
+  const meetingColumns = [
+    { key: 'title', header: 'Meeting', sortable: true },
+    { key: 'projectId', header: 'Project' },
+    { key: 'scheduledAt', header: 'Scheduled', render: (v: string) => formatDateTime(v) },
+    { key: 'duration', header: 'Duration', render: (v: number) => `${v} min` },
+    { key: 'host', header: 'Host' },
+    { key: 'status', header: 'Status', render: (v: string) => <Badge variant={v === 'Scheduled' ? 'default' : v === 'Completed' ? 'secondary' : 'outline'}>{v}</Badge> },
+  ];
 
+  const sharedDocColumns = [
+    { key: 'documentId', header: 'Document', sortable: true },
+    { key: 'sharedWith', header: 'Shared With', render: (v: string[]) => v?.join(', ') || '-' },
+    { key: 'sharedBy', header: 'Shared By', sortable: true },
+    { key: 'accessLevel', header: 'Access', render: (v: string) => <Badge variant={v === 'Edit' ? 'default' : 'secondary'}>{v}</Badge> },
+    { key: 'sharedAt', header: 'Shared Date', render: (v: string) => formatDate(v) },
+  ];
+
+  const notificationColumns = [
+    { key: 'type', header: 'Notification Type', sortable: true },
+    { key: 'enabled', header: 'Status', render: (v: boolean) => (
+      <Badge variant={v ? 'default' : 'secondary'}>{v ? 'Enabled' : 'Disabled'}</Badge>
+    )},
+    { key: 'channel', header: 'Channel', render: (v: string) => <Badge variant="outline">{v}</Badge> },
+    { key: 'userId', header: 'User' },
+  ];
+
+  const getFormFields = () => {
+    if (dialogType === 'communication') return [
+      { name: 'type', label: 'Type', type: 'select' as const, options: [{ label: 'Message', value: 'Message' }, { label: 'Email', value: 'Email' }, { label: 'Comment', value: 'Comment' }] },
+      { name: 'subject', label: 'Subject', type: 'text' as const, required: true },
+      { name: 'content', label: 'Content', type: 'textarea' as const, rows: 3 },
+      { name: 'from', label: 'From', type: 'text' as const, required: true },
+      { name: 'projectId', label: 'Project ID', type: 'text' as const },
+      { name: 'readStatus', label: 'Status', type: 'select' as const, options: [{ label: 'Read', value: 'Read' }, { label: 'Unread', value: 'Unread' }] },
+    ];
+    if (dialogType === 'meeting') return [
+      { name: 'title', label: 'Meeting Title', type: 'text' as const, required: true },
+      { name: 'description', label: 'Description', type: 'textarea' as const, rows: 2 },
+      { name: 'projectId', label: 'Project ID', type: 'text' as const },
+      { name: 'scheduledAt', label: 'Scheduled Time', type: 'datetime-local' as any, required: true },
+      { name: 'duration', label: 'Duration (min)', type: 'number' as const },
+      { name: 'host', label: 'Host', type: 'text' as const },
+      { name: 'status', label: 'Status', type: 'select' as const, options: [{ label: 'Scheduled', value: 'Scheduled' }, { label: 'Completed', value: 'Completed' }, { label: 'Cancelled', value: 'Cancelled' }] },
+      { name: 'location', label: 'Location', type: 'text' as const },
+    ];
+    if (dialogType === 'sharedoc') return [
+      { name: 'documentId', label: 'Document ID', type: 'text' as const, required: true },
+      { name: 'sharedWith', label: 'Shared With (comma-separated)', type: 'text' as const },
+      { name: 'accessLevel', label: 'Access Level', type: 'select' as const, options: [{ label: 'View', value: 'View' }, { label: 'Edit', value: 'Edit' }] },
+      { name: 'sharedBy', label: 'Shared By', type: 'text' as const },
+    ];
+    return [
+      { name: 'type', label: 'Notification Type', type: 'text' as const, required: true },
+      { name: 'enabled', label: 'Enabled', type: 'select' as const, options: [{ label: 'Enabled', value: 'true' }, { label: 'Disabled', value: 'false' }] },
+      { name: 'channel', label: 'Channel', type: 'select' as const, options: [{ label: 'In-App', value: 'In-App' }, { label: 'Email', value: 'Email' }, { label: 'Both', value: 'Both' }] },
+      { name: 'userId', label: 'User ID', type: 'text' as const },
+    ];
+  };
+
+  const getViewFields = () => {
+    if (dialogType === 'communication') return [
+      { key: 'commId', label: 'Communication ID' },
+      { key: 'type', label: 'Type' },
+      { key: 'subject', label: 'Subject' },
+      { key: 'content', label: 'Content' },
+      { key: 'from', label: 'From' },
+      { key: 'projectId', label: 'Project' },
+      { key: 'timestamp', label: 'Time', render: (v: string) => formatDateTime(v) },
+      { key: 'readStatus', label: 'Status' },
+    ];
+    if (dialogType === 'meeting') return [
+      { key: 'meetingId', label: 'Meeting ID' },
+      { key: 'title', label: 'Title' },
+      { key: 'description', label: 'Description' },
+      { key: 'projectId', label: 'Project' },
+      { key: 'scheduledAt', label: 'Scheduled', render: (v: string) => formatDateTime(v) },
+      { key: 'duration', label: 'Duration (min)' },
+      { key: 'host', label: 'Host' },
+      { key: 'status', label: 'Status' },
+      { key: 'location', label: 'Location' },
+    ];
+    if (dialogType === 'sharedoc') return [
+      { key: 'documentId', label: 'Document ID' },
+      { key: 'sharedWith', label: 'Shared With', render: (v: string[]) => v?.join(', ') || '-' },
+      { key: 'sharedBy', label: 'Shared By' },
+      { key: 'accessLevel', label: 'Access Level' },
+      { key: 'sharedAt', label: 'Shared Date', render: (v: string) => formatDate(v) },
+    ];
+    return [
+      { key: 'type', label: 'Notification Type' },
+      { key: 'enabled', label: 'Status', render: (v: boolean) => v ? 'Enabled' : 'Disabled' },
+      { key: 'channel', label: 'Channel' },
+      { key: 'userId', label: 'User ID' },
+    ];
+  };
+
+  const unreadMessages = communications.filter(c => c.readStatus === 'Unread').length;
+  const todayMeetings = meetings.filter(m => m.status === 'Scheduled').length;
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center mb-4">
+        <Button variant="outline" size="sm" className="mr-4" onClick={() => navigate('/project-management')}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+        <PageHeader title="Project Collaboration" description="Team communication, meetings, and document sharing" />
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4">
-          <div className="flex items-center">
-            <MessageSquare className="h-8 w-8 text-blue-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-600">Unread Messages</p>
-              <p className="text-2xl font-bold">8</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center">
-            <Video className="h-8 w-8 text-green-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-600">Meetings Today</p>
-              <p className="text-2xl font-bold">4</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center">
-            <Share2 className="h-8 w-8 text-purple-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-600">Shared Documents</p>
-              <p className="text-2xl font-bold">23</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-orange-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-600">Active Members</p>
-              <p className="text-2xl font-bold">16</p>
-            </div>
-          </div>
-        </Card>
+        <StatCard title="Unread Messages" value={unreadMessages} icon={<MessageSquare className="h-6 w-6 text-blue-600" />} />
+        <StatCard title="Meetings Today" value={todayMeetings} icon={<Video className="h-6 w-6 text-green-600" />} />
+        <StatCard title="Shared Docs" value={sharedDocs.length} icon={<Share2 className="h-6 w-6 text-purple-600" />} />
+        <StatCard title="Active Members" value="16" icon={<Users className="h-6 w-6 text-orange-600" />} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -163,232 +234,81 @@ const Collaboration: React.FC = () => {
         <TabsContent value="communications" className="space-y-6">
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Team Communications</h3>
-              <Button>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                New Message
-              </Button>
+              <h3 className="text-lg font-semibold">Communications</h3>
+              <Button onClick={() => handleCRUD('communication')}><Plus className="h-4 w-4 mr-2" />New Message</Button>
             </div>
-            <DataTable 
-              columns={communicationColumns}
-              data={teamCommunications}
-              className="border rounded-md"
-            />
+            <EnhancedCRUDTable data={communications} columns={commColumns} title="" pageSize={10}
+              onCreate={() => handleCRUD('communication')} onEdit={item => handleCRUD('communication', item, true)} onDelete={item => handleDelete(item, 'communication')} onView={item => handleView(item, 'communication')} />
           </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Team Chat Channels</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <div>
-                    <span className="font-medium"># ERP Implementation</span>
-                    <p className="text-sm text-gray-600">12 members</p>
-                  </div>
-                  <Badge variant="destructive">3 new</Badge>
-                </div>
-                <div className="flex justify-between items-center border-b pb-2">
-                  <div>
-                    <span className="font-medium"># Website Redesign</span>
-                    <p className="text-sm text-gray-600">8 members</p>
-                  </div>
-                  <Badge variant="secondary">1 new</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="font-medium"># General Discussion</span>
-                    <p className="text-sm text-gray-600">24 members</p>
-                  </div>
-                  <Badge variant="outline">5 new</Badge>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                <div className="border-l-4 border-blue-500 pl-3">
-                  <p className="font-medium">John Smith shared a document</p>
-                  <p className="text-sm text-gray-600">Project Charter v2.1 • 2 hours ago</p>
-                </div>
-                <div className="border-l-4 border-green-500 pl-3">
-                  <p className="font-medium">Emma Wilson scheduled a meeting</p>
-                  <p className="text-sm text-gray-600">Design Review • Tomorrow 2 PM</p>
-                </div>
-                <div className="border-l-4 border-orange-500 pl-3">
-                  <p className="font-medium">Mike Johnson posted in #mobile-app</p>
-                  <p className="text-sm text-gray-600">API integration update • 1 hour ago</p>
-                </div>
-              </div>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="meetings" className="space-y-6">
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Meeting Management</h3>
-              <Button>
-                <Video className="h-4 w-4 mr-2" />
-                Schedule Meeting
-              </Button>
+              <h3 className="text-lg font-semibold">Meetings</h3>
+              <Button onClick={() => handleCRUD('meeting')}><Plus className="h-4 w-4 mr-2" />Schedule Meeting</Button>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Today's Meetings</h4>
-                <div className="space-y-3">
-                  {upcomingMeetings.map((meeting, index) => (
-                    <div key={index} className="flex justify-between items-center border-b pb-2">
-                      <div>
-                        <p className="font-medium">{meeting.title}</p>
-                        <p className="text-sm text-gray-600">{meeting.project}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{meeting.time}</p>
-                        <p className="text-sm text-gray-600">{meeting.attendees} attendees</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Meeting Tools</h4>
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Video className="h-4 w-4 mr-2" />
-                    Start Video Conference
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Calendar Integration
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Screen Sharing
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Meeting Chat
-                  </Button>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {meetings.filter(m => m.status === 'Scheduled').slice(0, 6).map(mtg => (
+                <Card key={mtg.id} className="p-4 border-l-4 border-blue-500">
+                  <h4 className="font-medium">{mtg.title}</h4>
+                  <p className="text-sm text-gray-500 mt-1">{formatDateTime(mtg.scheduledAt)}</p>
+                  <p className="text-sm text-gray-500">{mtg.duration} min • {mtg.host}</p>
+                </Card>
+              ))}
             </div>
+            <EnhancedCRUDTable data={meetings} columns={meetingColumns} title="" pageSize={10}
+              onCreate={() => handleCRUD('meeting')} onEdit={item => handleCRUD('meeting', item, true)} onDelete={item => handleDelete(item, 'meeting')} onView={item => handleView(item, 'meeting')} />
           </Card>
         </TabsContent>
 
         <TabsContent value="sharing" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Document Sharing Hub</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Recently Shared</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Project Charter v2.1</p>
-                      <p className="text-sm text-gray-600">Shared by John Smith</p>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Share2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">UI Mockups</p>
-                      <p className="text-sm text-gray-600">Shared by Emma Wilson</p>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Share2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">API Documentation</p>
-                      <p className="text-sm text-gray-600">Shared by Mike Johnson</p>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Share2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Collaboration Features</h4>
-                <div className="space-y-2 text-sm">
-                  <p>• Real-time document editing</p>
-                  <p>• Version control and history</p>
-                  <p>• Comment and review system</p>
-                  <p>• Access permissions management</p>
-                  <p>• Integration with project tools</p>
-                  <p>• Offline sync capabilities</p>
-                </div>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Document Sharing</h3>
+              <Button onClick={() => handleCRUD('sharedoc')}><Plus className="h-4 w-4 mr-2" />Share Document</Button>
             </div>
+            <EnhancedCRUDTable data={sharedDocs} columns={sharedDocColumns} title="" pageSize={10}
+              onCreate={() => handleCRUD('sharedoc')} onEdit={item => handleCRUD('sharedoc', item, true)} onDelete={item => handleDelete(item, 'sharedoc')} onView={item => handleView(item, 'sharedoc')} />
           </Card>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Notification Center</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Recent Notifications</h4>
-                <div className="space-y-3">
-                  <div className="flex items-start border-b pb-2">
-                    <Bell className="h-4 w-4 text-blue-600 mr-2 mt-1" />
-                    <div>
-                      <p className="font-medium">Task Assigned</p>
-                      <p className="text-sm text-gray-600">System Configuration task assigned to you</p>
-                      <p className="text-xs text-gray-500">5 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start border-b pb-2">
-                    <Bell className="h-4 w-4 text-green-600 mr-2 mt-1" />
-                    <div>
-                      <p className="font-medium">Meeting Reminder</p>
-                      <p className="text-sm text-gray-600">Sprint Planning in 30 minutes</p>
-                      <p className="text-xs text-gray-500">25 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <Bell className="h-4 w-4 text-orange-600 mr-2 mt-1" />
-                    <div>
-                      <p className="font-medium">Document Updated</p>
-                      <p className="text-sm text-gray-600">Technical Specification v2.0 has been updated</p>
-                      <p className="text-xs text-gray-500">1 hour ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">Notification Settings</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Task Assignments</span>
-                    <Badge variant="default">Enabled</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Meeting Reminders</span>
-                    <Badge variant="default">Enabled</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Document Updates</span>
-                    <Badge variant="secondary">Email Only</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Project Updates</span>
-                    <Badge variant="outline">Disabled</Badge>
-                  </div>
-                </div>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Notification Settings</h3>
+              <Button onClick={() => handleCRUD('notification')}><Plus className="h-4 w-4 mr-2" />Add Notification</Button>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {notifications.slice(0, 4).map(n => (
+                <Card key={n.id} className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Bell className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium">{n.type}</p>
+                      <p className="text-sm text-gray-500">Via {n.channel}</p>
+                    </div>
+                  </div>
+                  <Badge variant={n.enabled ? 'default' : 'secondary'}>{n.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                </Card>
+              ))}
+            </div>
+            <EnhancedCRUDTable data={notifications} columns={notificationColumns} title="" pageSize={10}
+              onCreate={() => handleCRUD('notification')} onEdit={item => handleCRUD('notification', item, true)} onDelete={item => handleDelete(item, 'notification')} onView={item => handleView(item, 'notification')} />
           </Card>
         </TabsContent>
       </Tabs>
+
+      <CRUDDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} 
+        title={dialogType === 'communication' ? 'Communication' : dialogType === 'meeting' ? 'Meeting' : dialogType === 'sharedoc' ? 'Document Share' : 'Notification'}
+        item={selectedItem} onSave={handleSave} fields={getFormFields()} isEdit={isEditing} />
+      
+      <ConfirmDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} onConfirm={confirmDelete} 
+        title="Delete Item" description="Are you sure you want to delete this item?" confirmLabel="Delete" />
+
+      <ViewDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}
+        title={dialogType === 'communication' ? 'Communication' : dialogType === 'meeting' ? 'Meeting' : dialogType === 'sharedoc' ? 'Document Share' : 'Notification'}
+        item={selectedItem} fields={getViewFields()} />
     </div>
   );
 };

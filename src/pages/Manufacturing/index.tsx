@@ -70,11 +70,24 @@ const ManufacturingDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Manufacturing</h1>
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" className="text-xs">
-            Personalize Page
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => {
+            toast({
+              title: "Customize Dashboard",
+              description: "Opening dashboard customization options...",
+            });
+          }}>
+            Customize Dashboard
           </Button>
-          <Button variant="outline" size="sm" className="text-xs">
-            Share Page
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => {
+            toast({
+              title: "Export Dashboard",
+              description: "Exporting dashboard view as PDF...",
+            });
+            setTimeout(() => {
+              toast({ title: "Export Complete", description: "Dashboard exported successfully" });
+            }, 1500);
+          }}>
+            Export View
           </Button>
         </div>
       </div>

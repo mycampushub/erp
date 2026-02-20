@@ -5,21 +5,25 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ArrowLeft, Plus, CheckCircle, XCircle, AlertTriangle, DollarSign, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Textarea } from '../../components/ui/textarea';
+import { ArrowLeft, Plus, CheckCircle, XCircle, AlertTriangle, DollarSign, FileText, Save, X, Trash2, Edit2 } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
 import EnhancedDataTable, { EnhancedColumn, TableAction } from '../../components/data/EnhancedDataTable';
 import { useToast } from '../../hooks/use-toast';
+import { seedProcurementData, getProcurementData, Invoice, PurchaseOrder, Supplier } from '../../lib/procurementData';
 
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
+interface InvoiceFormData {
   supplier: string;
   poNumber: string;
   invoiceDate: string;
   dueDate: string;
-  totalAmount: number;
+  totalAmount: string;
   currency: string;
   status: 'Pending' | 'Matched' | 'Blocked' | 'Approved' | 'Paid' | 'Rejected';
   matchingStatus: 'Not Matched' | 'Partially Matched' | 'Fully Matched' | 'Variances Found';
@@ -33,7 +37,27 @@ const InvoiceVerification: React.FC = () => {
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   const [activeTab, setActiveTab] = useState('invoices');
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const initialData = getProcurementData();
+  const [invoices, setInvoices] = useState<Invoice[]>(() => initialData?.invoices || []);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => initialData?.purchaseOrders || []);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => initialData?.suppliers || []);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null);
+  const [formData, setFormData] = useState<InvoiceFormData>({
+    supplier: '',
+    poNumber: '',
+    invoiceDate: '',
+    dueDate: '',
+    totalAmount: '',
+    currency: 'USD',
+    status: 'Pending',
+    matchingStatus: 'Not Matched',
+    paymentTerms: 'Net 30',
+    processor: '',
+    discrepancies: []
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,44 +66,150 @@ const InvoiceVerification: React.FC = () => {
     }
   }, [isEnabled, speak]);
 
-  useEffect(() => {
-    const sampleInvoices: Invoice[] = [
-      {
-        id: 'inv-001',
-        invoiceNumber: 'INV-2025-001',
-        supplier: 'Dell Technologies',
-        poNumber: 'PO-2025-123',
-        invoiceDate: '2025-01-26',
-        dueDate: '2025-02-25',
-        totalAmount: 12500.00,
-        currency: 'USD',
-        status: 'Matched',
-        matchingStatus: 'Fully Matched',
-        paymentTerms: 'Net 30',
-        processor: 'John Smith',
-        discrepancies: []
-      },
-      {
-        id: 'inv-002',
-        invoiceNumber: 'INV-2025-002',
-        supplier: 'Office Depot',
-        poNumber: 'PO-2025-124',
-        invoiceDate: '2025-01-25',
-        dueDate: '2025-02-09',
-        totalAmount: 1250.00,
-        currency: 'USD',
-        status: 'Blocked',
-        matchingStatus: 'Variances Found',
-        paymentTerms: 'Net 15',
-        processor: 'Sarah Wilson',
-        discrepancies: ['Quantity variance: Ordered 100, Invoiced 85', 'Price variance: PO $1.25, Invoice $1.47']
-      }
-    ];
-    setInvoices(sampleInvoices);
-  }, []);
+  const generateId = (prefix: string): string => {
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  };
+
+  const handleCreate = () => {
+    setEditingInvoice(null);
+    setFormData({
+      supplier: '',
+      poNumber: '',
+      invoiceDate: '',
+      dueDate: '',
+      totalAmount: '',
+      currency: 'USD',
+      status: 'Pending',
+      matchingStatus: 'Not Matched',
+      paymentTerms: 'Net 30',
+      processor: '',
+      discrepancies: []
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setFormData({
+      supplier: invoice.supplier,
+      poNumber: invoice.poNumber,
+      invoiceDate: invoice.invoiceDate,
+      dueDate: invoice.dueDate,
+      totalAmount: invoice.totalAmount.toString(),
+      currency: invoice.currency,
+      status: invoice.status,
+      matchingStatus: invoice.matchingStatus,
+      paymentTerms: invoice.paymentTerms,
+      processor: invoice.processor,
+      discrepancies: invoice.discrepancies
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (invoice: Invoice) => {
+    setDeletingInvoice(invoice);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingInvoice) {
+      const updatedInvoices = invoices.filter(i => i.id !== deletingInvoice.id);
+      setInvoices(updatedInvoices);
+      toast({
+        title: 'Invoice Deleted',
+        description: `Invoice ${deletingInvoice.invoiceNumber} has been deleted.`,
+      });
+      setIsDeleteDialogOpen(false);
+      setDeletingInvoice(null);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!formData.supplier || !formData.poNumber || !formData.invoiceDate || !formData.dueDate || !formData.totalAmount) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const selectedSupplier = suppliers.find(s => s.name === formData.supplier);
+    const selectedPO = purchaseOrders.find(po => po.poNumber === formData.poNumber);
+    
+    const invoiceData = {
+      supplier: formData.supplier,
+      supplierId: selectedSupplier?.id || '',
+      poNumber: formData.poNumber,
+      poId: selectedPO?.id || '',
+      invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate,
+      totalAmount: parseFloat(formData.totalAmount),
+      currency: formData.currency,
+      status: formData.status,
+      matchingStatus: formData.matchingStatus,
+      paymentTerms: formData.paymentTerms,
+      processor: formData.processor,
+      discrepancies: formData.discrepancies,
+      lineItems: []
+    };
+
+    if (editingInvoice) {
+      const updatedInvoice: Invoice = { ...editingInvoice, ...invoiceData };
+      const updatedInvoices = invoices.map(i => i.id === editingInvoice.id ? updatedInvoice : i);
+      setInvoices(updatedInvoices);
+      toast({
+        title: 'Invoice Updated',
+        description: `Invoice ${editingInvoice.invoiceNumber} has been updated.`,
+      });
+    } else {
+      const newInvoice: Invoice = {
+        id: generateId('inv'),
+        invoiceNumber: `INV-2025-${String(invoices.length + 1).padStart(4, '0')}`,
+        ...invoiceData,
+        createdAt: new Date().toISOString()
+      };
+      const updatedInvoices = [...invoices, newInvoice];
+      setInvoices(updatedInvoices);
+      toast({
+        title: 'Invoice Created',
+        description: `Invoice ${newInvoice.invoiceNumber} has been created.`,
+      });
+    }
+
+    setIsDialogOpen(false);
+  };
+
+  const handleMatch = (invoice: Invoice) => {
+    const updatedInvoices = invoices.map(i => 
+      i.id === invoice.id ? { ...i, matchingStatus: 'Fully Matched' as const, status: 'Matched' as const } : i
+    );
+    setInvoices(updatedInvoices);
+    toast({ title: 'Matching Complete', description: `Invoice ${invoice.invoiceNumber} has been matched.` });
+  };
+
+  const handleReview = (invoice: Invoice) => {
+    toast({ title: 'Review Invoice', description: `Opening review for ${invoice.invoiceNumber}` });
+  };
+
+  const handleApprove = (invoice: Invoice) => {
+    const updatedInvoices = invoices.map(i => 
+      i.id === invoice.id ? { ...i, status: 'Approved' as const } : i
+    );
+    setInvoices(updatedInvoices);
+    toast({ title: 'Invoice Approved', description: `Invoice ${invoice.invoiceNumber} approved for payment` });
+  };
+
+  const handleReject = (invoice: Invoice) => {
+    const updatedInvoices = invoices.map(i => 
+      i.id === invoice.id ? { ...i, status: 'Rejected' as const } : i
+    );
+    setInvoices(updatedInvoices);
+    toast({ title: 'Invoice Rejected', description: `Invoice ${invoice.invoiceNumber} has been rejected` });
+  };
 
   const getStatusColor = (status: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'Pending': 'bg-yellow-100 text-yellow-800',
       'Matched': 'bg-blue-100 text-blue-800',
       'Blocked': 'bg-red-100 text-red-800',
@@ -87,17 +217,17 @@ const InvoiceVerification: React.FC = () => {
       'Paid': 'bg-gray-100 text-gray-800',
       'Rejected': 'bg-red-100 text-red-800'
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   const getMatchingColor = (matching: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'Not Matched': 'bg-gray-100 text-gray-800',
       'Partially Matched': 'bg-yellow-100 text-yellow-800',
       'Fully Matched': 'bg-green-100 text-green-800',
       'Variances Found': 'bg-red-100 text-red-800'
     };
-    return colors[matching as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[matching] || 'bg-gray-100 text-gray-800';
   };
 
   const columns: EnhancedColumn[] = [
@@ -150,26 +280,44 @@ const InvoiceVerification: React.FC = () => {
 
   const actions: TableAction[] = [
     {
-      label: 'Verify',
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: (row: Invoice) => {
-        toast({
-          title: 'Verify Invoice',
-          description: `Starting verification for ${row.invoiceNumber}`,
-        });
-      },
+      label: 'View',
+      icon: <FileText className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleEdit(row),
       variant: 'ghost'
     },
     {
-      label: 'Review Discrepancies',
-      icon: <AlertTriangle className="h-4 w-4" />,
-      onClick: (row: Invoice) => {
-        toast({
-          title: 'Review Discrepancies',
-          description: `Reviewing discrepancies for ${row.invoiceNumber}`,
-        });
-      },
+      label: 'Edit',
+      icon: <Edit2 className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleEdit(row),
       variant: 'ghost'
+    },
+    {
+      label: 'Match',
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleMatch(row),
+      variant: 'ghost',
+      condition: (row: Invoice) => row.status === 'Pending'
+    },
+    {
+      label: 'Approve',
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleApprove(row),
+      variant: 'ghost',
+      condition: (row: Invoice) => row.matchingStatus === 'Fully Matched'
+    },
+    {
+      label: 'Reject',
+      icon: <XCircle className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleReject(row),
+      variant: 'ghost',
+      condition: (row: Invoice) => row.status === 'Pending' || row.status === 'Blocked'
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (row: Invoice) => handleDelete(row),
+      variant: 'ghost',
+      condition: (row: Invoice) => row.status === 'Pending' || row.status === 'Rejected'
     }
   ];
 
@@ -241,7 +389,7 @@ const InvoiceVerification: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Invoice Verification Queue
-                <Button onClick={() => toast({ title: 'Upload Invoice', description: 'Opening invoice upload form' })}>
+                <Button onClick={handleCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   Upload Invoice
                 </Button>
@@ -255,6 +403,14 @@ const InvoiceVerification: React.FC = () => {
                 searchPlaceholder="Search invoices, suppliers, or PO numbers..."
                 exportable={true}
                 refreshable={true}
+                onRefresh={() => {
+                  const data = getProcurementData();
+                  if (data) {
+                    setInvoices(data.invoices);
+                    setPurchaseOrders(data.purchaseOrders);
+                    setSuppliers(data.suppliers);
+                  }
+                }}
               />
             </CardContent>
           </Card>
@@ -284,11 +440,11 @@ const InvoiceVerification: React.FC = () => {
                         </Badge>
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleMatch(invoice)}>
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Match
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleReview(invoice)}>
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Review
                         </Button>
@@ -306,6 +462,9 @@ const InvoiceVerification: React.FC = () => {
                     )}
                   </div>
                 ))}
+                {invoices.filter(i => i.matchingStatus !== 'Fully Matched').length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">All invoices are fully matched.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -339,16 +498,15 @@ const InvoiceVerification: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          Resolve
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Reject
-                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleReview(invoice)}>Resolve</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleReject(invoice)}>Reject</Button>
                       </div>
                     </div>
                   </div>
                 ))}
+                {invoices.filter(i => i.status === 'Blocked').length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No blocked invoices.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -414,6 +572,179 @@ const InvoiceVerification: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingInvoice ? 'Edit Invoice' : 'Upload New Invoice'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="supplier">Supplier *</Label>
+                <Select value={formData.supplier} onValueChange={(value) => setFormData({ ...formData, supplier: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.slice(0, 15).map(s => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="poNumber">PO Number *</Label>
+                <Select value={formData.poNumber} onValueChange={(value) => setFormData({ ...formData, poNumber: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select PO" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {purchaseOrders.slice(0, 15).map(po => (
+                      <SelectItem key={po.id} value={po.poNumber}>{po.poNumber}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="invoiceDate">Invoice Date *</Label>
+                <Input
+                  id="invoiceDate"
+                  type="date"
+                  value={formData.invoiceDate}
+                  onChange={(e) => setFormData({ ...formData, invoiceDate: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date *</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="totalAmount">Total Amount *</Label>
+                <Input
+                  id="totalAmount"
+                  type="number"
+                  value={formData.totalAmount}
+                  onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Matched">Matched</SelectItem>
+                    <SelectItem value="Blocked">Blocked</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="matchingStatus">Matching Status</Label>
+                <Select value={formData.matchingStatus} onValueChange={(value: any) => setFormData({ ...formData, matchingStatus: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Not Matched">Not Matched</SelectItem>
+                    <SelectItem value="Partially Matched">Partially Matched</SelectItem>
+                    <SelectItem value="Fully Matched">Fully Matched</SelectItem>
+                    <SelectItem value="Variances Found">Variances Found</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="paymentTerms">Payment Terms</Label>
+                <Select value={formData.paymentTerms} onValueChange={(value) => setFormData({ ...formData, paymentTerms: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Immediate">Immediate</SelectItem>
+                    <SelectItem value="Net 15">Net 15</SelectItem>
+                    <SelectItem value="Net 30">Net 30</SelectItem>
+                    <SelectItem value="Net 45">Net 45</SelectItem>
+                    <SelectItem value="Net 60">Net 60</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="processor">Processor</Label>
+                <Input
+                  id="processor"
+                  value={formData.processor}
+                  onChange={(e) => setFormData({ ...formData, processor: e.target.value })}
+                  placeholder="Enter processor name"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>
+              <Save className="h-4 w-4 mr-2" />
+              {editingInvoice ? 'Update' : 'Upload'} Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete invoice "{deletingInvoice?.invoiceNumber}"? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

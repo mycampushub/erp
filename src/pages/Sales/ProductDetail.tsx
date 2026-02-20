@@ -14,6 +14,7 @@ const ProductDetail: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [product, setProduct] = useState<any>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     // Simulate API call to fetch product details
@@ -94,6 +95,7 @@ const ProductDetail: React.FC = () => {
               <div 
                 key={i}
                 className={`border rounded w-20 h-20 overflow-hidden cursor-pointer ${i === 0 ? 'ring-2 ring-blue-500' : ''}`}
+                onClick={() => { setSelectedImage(i); toast({ description: `Viewing image ${i + 1}` }); }}
               >
                 <img src={img} alt={`${product.name} ${i+1}`} className="w-full h-full object-cover" />
               </div>
@@ -186,8 +188,8 @@ const ProductDetail: React.FC = () => {
           </div>
           
           <div className="flex gap-3 pt-6">
-            <Button className="w-full">Add to Order</Button>
-            <Button variant="outline" className="w-full">Add to Quote</Button>
+            <Button className="w-full" onClick={() => toast({ title: "Add to Order", description: "Product added to order successfully!" })}>Add to Order</Button>
+            <Button variant="outline" className="w-full" onClick={() => toast({ title: "Add to Quote", description: "Product added to quote successfully!" })}>Add to Quote</Button>
           </div>
         </div>
       </div>
@@ -297,7 +299,7 @@ const ProductDetail: React.FC = () => {
                   <h4 className="font-medium">Server Rack PDU</h4>
                   <p className="text-sm text-gray-600 mt-1">Power distribution unit for server racks</p>
                   <div className="mt-2 font-medium">€350.00</div>
-                  <Button variant="outline" className="w-full mt-3">View Details</Button>
+                  <Button variant="outline" className="w-full mt-3" onClick={() => toast({ title: "View Details", description: "Opening Server Rack PDU details..." })}>View Details</Button>
                 </CardContent>
               </Card>
               
@@ -311,7 +313,7 @@ const ProductDetail: React.FC = () => {
                   <h4 className="font-medium">Cable Management Kit</h4>
                   <p className="text-sm text-gray-600 mt-1">Professional cable management solution</p>
                   <div className="mt-2 font-medium">€120.00</div>
-                  <Button variant="outline" className="w-full mt-3">View Details</Button>
+                  <Button variant="outline" className="w-full mt-3" onClick={() => toast({ title: "View Details", description: "Opening Cable Management Kit details..." })}>View Details</Button>
                 </CardContent>
               </Card>
               
@@ -325,7 +327,7 @@ const ProductDetail: React.FC = () => {
                   <h4 className="font-medium">Rack Cooling System</h4>
                   <p className="text-sm text-gray-600 mt-1">Active cooling for server racks</p>
                   <div className="mt-2 font-medium">€850.00</div>
-                  <Button variant="outline" className="w-full mt-3">View Details</Button>
+                  <Button variant="outline" className="w-full mt-3" onClick={() => toast({ title: "View Details", description: "Opening Rack Cooling System details..." })}>View Details</Button>
                 </CardContent>
               </Card>
             </div>

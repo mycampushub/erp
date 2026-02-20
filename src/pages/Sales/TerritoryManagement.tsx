@@ -3,337 +3,259 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Button } from '../../components/ui/button';
-import { Search, Plus, Filter, Edit, Trash2, MapPin, Users, TrendingUp, Target } from 'lucide-react';
+import { Search, Plus, Filter, Edit, Trash2, MapPin, Users, TrendingUp, Target, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Textarea } from '../../components/ui/textarea';
-import DataTable from '../../components/data/DataTable';
+import EnhancedDataTable, { EnhancedColumn, TableAction } from '../../components/data/EnhancedDataTable';
 import { BarChart, Bar, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { listEntities, upsertEntity, removeEntity, generateId } from '../../lib/localCrud';
 
 interface Territory {
   id: string;
+  territoryNumber?: string;
   name: string;
   region: string;
   salesRep: string;
-  salesRepId: string;
-  manager: string;
-  countries: string[];
-  states: string[];
-  cities: string[];
-  customers: number;
-  prospects: number;
-  revenue: number;
+  salesRepId?: string;
+  manager?: string;
+  countries?: string[];
+  states?: string[];
+  cities?: string[];
+  customers?: number;
+  prospects?: number;
+  revenue?: number;
   target: number;
-  achievement: number;
-  lastQuarter: number;
-  growth: number;
-  status: 'Active' | 'Inactive' | 'Pending';
+  achieved?: number;
+  achievement?: number;
+  lastQuarter?: number;
+  growth?: number;
+  status: 'Active' | 'Inactive';
 }
 
 interface TerritoryRule {
   id: string;
+  ruleNumber?: string;
   name: string;
-  type: 'Geographic' | 'Industry' | 'Company Size' | 'Revenue';
-  criteria: string;
-  priority: number;
-  isActive: boolean;
+  territoryId?: string;
+  type?: string;
+  conditionType?: string;
+  conditionValue?: string;
+  criteria?: string;
+  priority?: number;
+  isActive?: boolean;
 }
+
+const STORAGE_KEY_TERRITORIES = 'sales_territories';
+const STORAGE_KEY_RULES = 'sales_territory_rules';
+
+const sampleTerritories: Territory[] = [
+  { id: generateId('terr'), name: 'North America', region: 'Americas', salesRep: 'John Smith', target: 5000000, achieved: 3200000, customers: 45, status: 'Active' },
+  { id: generateId('terr'), name: 'Europe West', region: 'Europe', salesRep: 'Sarah Johnson', target: 4000000, achieved: 2800000, customers: 38, status: 'Active' },
+  { id: generateId('terr'), name: 'Asia Pacific', region: 'Asia', salesRep: 'Mike Brown', target: 3000000, achieved: 2100000, customers: 28, status: 'Active' },
+];
+
+const sampleTerritoryRules: TerritoryRule[] = [
+  { id: generateId('rule'), name: 'High Value Customers', territoryId: '', conditionType: 'revenue', conditionValue: '>100000', priority: 1 },
+  { id: generateId('rule'), name: 'Tech Industry', territoryId: '', conditionType: 'industry', conditionValue: 'Technology', priority: 2 },
+];
 
 const TerritoryManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('territories');
-  const [territories, setTerritories] = useState<Territory[]>([]);
-  const [territoryRules, setTerritoryRules] = useState<TerritoryRule[]>([]);
+  const [territories, setTerritories] = useState<Territory[]>(() => sampleTerritories);
+  const [territoryRules, setTerritoryRules] = useState<TerritoryRule[]>(() => sampleTerritoryRules);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRegion, setFilterRegion] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<'territory' | 'rule'>('territory');
+  const [selectedItem, setSelectedItem] = useState<Territory | TerritoryRule | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const sampleTerritories: Territory[] = [
-      {
-        id: 'TERR-001',
-        name: 'Northeast USA',
-        region: 'North America',
-        salesRep: 'Sarah Johnson',
-        salesRepId: 'REP-001',
-        manager: 'Michael Smith',
-        countries: ['United States'],
-        states: ['New York', 'Massachusetts', 'Connecticut', 'Vermont', 'New Hampshire', 'Maine'],
-        cities: ['New York', 'Boston', 'Hartford', 'Burlington'],
-        customers: 145,
-        prospects: 67,
-        revenue: 2850000,
-        target: 2800000,
-        achievement: 101.8,
-        lastQuarter: 2650000,
-        growth: 7.5,
-        status: 'Active'
-      },
-      {
-        id: 'TERR-002',
-        name: 'California West',
-        region: 'North America',
-        salesRep: 'Mike Wilson',
-        salesRepId: 'REP-002',
-        manager: 'Michael Smith',
-        countries: ['United States'],
-        states: ['California'],
-        cities: ['San Francisco', 'Los Angeles', 'San Diego', 'Sacramento'],
-        customers: 198,
-        prospects: 89,
-        revenue: 3240000,
-        target: 3200000,
-        achievement: 101.3,
-        lastQuarter: 3100000,
-        growth: 4.5,
-        status: 'Active'
-      },
-      {
-        id: 'TERR-003',
-        name: 'UK & Ireland',
-        region: 'Europe',
-        salesRep: 'Lisa Chen',
-        salesRepId: 'REP-003',
-        manager: 'Emma Davis',
-        countries: ['United Kingdom', 'Ireland'],
-        states: ['England', 'Scotland', 'Wales'],
-        cities: ['London', 'Manchester', 'Edinburgh', 'Dublin'],
-        customers: 89,
-        prospects: 45,
-        revenue: 1950000,
-        target: 2000000,
-        achievement: 97.5,
-        lastQuarter: 1850000,
-        growth: 5.4,
-        status: 'Active'
-      },
-      {
-        id: 'TERR-004',
-        name: 'APAC North',
-        region: 'Asia Pacific',
-        salesRep: 'David Brown',
-        salesRepId: 'REP-004',
-        manager: 'Kevin Wong',
-        countries: ['Japan', 'South Korea', 'Taiwan'],
-        states: [],
-        cities: ['Tokyo', 'Seoul', 'Taipei'],
-        customers: 67,
-        prospects: 34,
-        revenue: 1750000,
-        target: 1800000,
-        achievement: 97.2,
-        lastQuarter: 1680000,
-        growth: 4.2,
-        status: 'Active'
-      }
-    ];
+  const loadData = () => {
+    setIsLoading(false);
+  };
 
-    const sampleRules: TerritoryRule[] = [
-      {
-        id: 'RULE-001',
-        name: 'Geographic Assignment - US States',
-        type: 'Geographic',
-        criteria: 'Assign based on state boundaries',
-        priority: 1,
-        isActive: true
-      },
-      {
-        id: 'RULE-002',
-        name: 'Enterprise Accounts',
-        type: 'Company Size',
-        criteria: 'Companies with >1000 employees',
-        priority: 2,
-        isActive: true
-      },
-      {
-        id: 'RULE-003',
-        name: 'Technology Sector',
-        type: 'Industry',
-        criteria: 'Technology and software companies',
-        priority: 3,
-        isActive: true
-      },
-      {
-        id: 'RULE-004',
-        name: 'High Revenue Accounts',
-        type: 'Revenue',
-        criteria: 'Annual revenue >$50M',
-        priority: 4,
-        isActive: false
-      }
-    ];
-
-    setTimeout(() => {
-      setTerritories(sampleTerritories);
-      setTerritoryRules(sampleRules);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  const filteredTerritories = territories.filter(territory => {
-    const matchesSearch = territory.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         territory.salesRep.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRegion = filterRegion === 'all' || territory.region === filterRegion;
-    const matchesStatus = filterStatus === 'all' || territory.status.toLowerCase() === filterStatus;
-    return matchesSearch && matchesRegion && matchesStatus;
-  });
+  const filteredTerritories = territories.filter(t => 
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.salesRep.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleCreateTerritory = () => {
-    setSelectedTerritory(null);
+    setSelectedItem(null);
     setIsEditing(false);
+    setDialogType('territory');
+    setIsDialogOpen(true);
+  };
+
+  const handleCreateRule = () => {
+    setSelectedItem(null);
+    setIsEditing(false);
+    setDialogType('rule');
     setIsDialogOpen(true);
   };
 
   const handleEditTerritory = (territory: Territory) => {
-    setSelectedTerritory(territory);
+    setSelectedItem(territory);
     setIsEditing(true);
+    setDialogType('territory');
     setIsDialogOpen(true);
   };
 
-  const handleDeleteTerritory = (territoryId: string) => {
-    setTerritories(prev => prev.filter(t => t.id !== territoryId));
-    toast({
-      title: 'Territory Deleted',
-      description: 'Territory has been successfully removed.',
-    });
+  const handleEditRule = (rule: TerritoryRule) => {
+    setSelectedItem(rule);
+    setIsEditing(true);
+    setDialogType('rule');
+    setIsDialogOpen(true);
   };
 
-  const territoryColumns = [
-    { key: 'name', header: 'Territory Name' },
-    { key: 'region', header: 'Region' },
-    { key: 'salesRep', header: 'Sales Rep' },
-    { key: 'customers', header: 'Customers' },
+  const handleDeleteTerritory = (territory: Territory) => {
+    if (window.confirm(`Delete territory ${territory.name}?`)) {
+      removeEntity(STORAGE_KEY_TERRITORIES, territory.id);
+      loadData();
+      toast({ title: 'Deleted', description: 'Territory has been deleted.' });
+    }
+  };
+
+  const handleDeleteRule = (rule: TerritoryRule) => {
+    if (window.confirm(`Delete rule ${rule.name}?`)) {
+      removeEntity(STORAGE_KEY_RULES, rule.id);
+      loadData();
+      toast({ title: 'Deleted', description: 'Territory rule has been deleted.' });
+    }
+  };
+
+  const handleSaveTerritory = (data: Partial<Territory>) => {
+    if (isEditing && selectedItem) {
+      upsertEntity(STORAGE_KEY_TERRITORIES, { ...selectedItem, ...data } as Territory);
+      toast({ title: 'Updated', description: 'Territory has been updated.' });
+    } else {
+      const newTerritory: Territory = {
+        id: generateId('terr'),
+        territoryNumber: `TERR-${String(territories.length + 1).padStart(3, '0')}`,
+        name: data.name || '',
+        region: data.region || 'North America',
+        salesRep: data.salesRep || '',
+        salesRepId: data.salesRepId || '',
+        manager: data.manager || '',
+        countries: data.countries || [],
+        states: data.states || [],
+        cities: data.cities || [],
+        customers: data.customers || 0,
+        prospects: data.prospects || 0,
+        revenue: data.revenue || 0,
+        target: data.target || 0,
+        achievement: data.achievement || 0,
+        lastQuarter: data.lastQuarter || 0,
+        growth: data.growth || 0,
+        status: 'Active'
+      };
+      upsertEntity(STORAGE_KEY_TERRITORIES, newTerritory);
+      toast({ title: 'Created', description: 'Territory has been created.' });
+    }
+    loadData();
+    setIsDialogOpen(false);
+  };
+
+  const handleSaveRule = (data: Partial<TerritoryRule>) => {
+    if (isEditing && selectedItem) {
+      upsertEntity(STORAGE_KEY_RULES, { ...selectedItem, ...data } as TerritoryRule);
+      toast({ title: 'Updated', description: 'Territory rule has been updated.' });
+    } else {
+      const newRule: TerritoryRule = {
+        id: generateId('terrrule'),
+        ruleNumber: `RULE-${String(territoryRules.length + 1).padStart(3, '0')}`,
+        name: data.name || '',
+        type: data.type || 'Geographic',
+        criteria: data.criteria || '',
+        priority: data.priority || 1,
+        isActive: true
+      };
+      upsertEntity(STORAGE_KEY_RULES, newRule);
+      toast({ title: 'Created', description: 'Territory rule has been created.' });
+    }
+    loadData();
+    setIsDialogOpen(false);
+  };
+
+  const territoryColumns: EnhancedColumn[] = [
+    { key: 'territoryNumber', header: 'Territory ID', sortable: true },
+    { key: 'name', header: 'Territory Name', sortable: true, searchable: true },
+    { key: 'region', header: 'Region', sortable: true },
+    { key: 'salesRep', header: 'Sales Rep', sortable: true, searchable: true },
+    { key: 'customers', header: 'Customers', sortable: true },
+    { key: 'revenue', header: 'Revenue', sortable: true, render: (v: number) => `$${(v / 1000).toFixed(0)}K` },
+    { key: 'achievement', header: 'Achievement', sortable: true, render: (v: number) => `${v.toFixed(1)}%` },
     { 
-      key: 'revenue', 
-      header: 'Revenue',
-      render: (value: number) => `$${(value / 1000000).toFixed(1)}M`
-    },
-    { 
-      key: 'achievement', 
-      header: 'Achievement',
-      render: (value: number) => (
-        <Badge variant={value >= 100 ? 'default' : value >= 90 ? 'secondary' : 'destructive'}>
-          {value.toFixed(1)}%
-        </Badge>
-      )
-    },
-    { 
-      key: 'growth', 
-      header: 'Growth',
-      render: (value: number) => (
-        <span className={value >= 0 ? 'text-green-600' : 'text-red-600'}>
-          {value >= 0 ? '+' : ''}{value.toFixed(1)}%
-        </span>
-      )
-    },
-    { 
-      key: 'actions', 
-      header: 'Actions',
-      render: (_, row: Territory) => (
-        <div className="flex space-x-2">
-          <Button variant="ghost" size="sm" onClick={() => handleEditTerritory(row)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleDeleteTerritory(row.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+      key: 'status', 
+      header: 'Status',
+      render: (value: string) => (
+        <Badge variant={value === 'Active' ? 'default' : 'outline'}>{value}</Badge>
       )
     }
   ];
 
-  const ruleColumns = [
-    { key: 'name', header: 'Rule Name' },
-    { key: 'type', header: 'Type' },
-    { key: 'criteria', header: 'Criteria' },
-    { key: 'priority', header: 'Priority' },
-    { 
-      key: 'isActive', 
-      header: 'Status',
-      render: (value: boolean) => (
-        <Badge variant={value ? 'default' : 'outline'}>
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
-      )
+  const territoryActions: TableAction[] = [
+    {
+      label: 'Edit',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (row: Territory) => handleEditTerritory(row),
+      variant: 'ghost'
     },
-    { 
-      key: 'actions', 
-      header: 'Actions',
-      render: (_, row: TerritoryRule) => (
-        <div className="flex space-x-2">
-          <Button variant="ghost" size="sm">
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      )
+    {
+      label: 'Delete',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (row: Territory) => handleDeleteTerritory(row),
+      variant: 'ghost'
+    }
+  ];
+
+  const ruleColumns: EnhancedColumn[] = [
+    { key: 'ruleNumber', header: 'Rule ID', sortable: true },
+    { key: 'name', header: 'Rule Name', sortable: true, searchable: true },
+    { key: 'type', header: 'Type', sortable: true },
+    { key: 'criteria', header: 'Criteria' },
+    { key: 'priority', header: 'Priority', sortable: true },
+    { key: 'isActive', header: 'Status', render: (v: boolean) => <Badge variant={v ? 'default' : 'outline'}>{v ? 'Active' : 'Inactive'}</Badge> }
+  ];
+
+  const ruleActions: TableAction[] = [
+    {
+      label: 'Edit',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (row: TerritoryRule) => handleEditRule(row),
+      variant: 'ghost'
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (row: TerritoryRule) => handleDeleteRule(row),
+      variant: 'ghost'
     }
   ];
 
   const territoryMetrics = [
-    { 
-      title: 'Total Territories', 
-      value: territories.length.toString(), 
-      change: '+2',
-      icon: MapPin
-    },
-    { 
-      title: 'Total Customers', 
-      value: territories.reduce((sum, t) => sum + t.customers, 0).toString(), 
-      change: '+12%',
-      icon: Users
-    },
-    { 
-      title: 'Total Revenue', 
-      value: `$${(territories.reduce((sum, t) => sum + t.revenue, 0) / 1000000).toFixed(1)}M`, 
-      change: '+8.5%',
-      icon: TrendingUp
-    },
-    { 
-      title: 'Avg Achievement', 
-      value: `${(territories.reduce((sum, t) => sum + t.achievement, 0) / territories.length).toFixed(1)}%`, 
-      change: '+2.1%',
-      icon: Target
-    }
+    { title: 'Total Territories', value: territories.length },
+    { title: 'Total Customers', value: territories.reduce((sum, t) => sum + t.customers, 0) },
+    { title: 'Total Revenue', value: `$${(territories.reduce((sum, t) => sum + t.revenue, 0) / 1000000).toFixed(1)}M` },
+    { title: 'Avg Achievement', value: `${(territories.reduce((sum, t) => sum + t.achievement, 0) / territories.length).toFixed(1)}%` }
   ];
-
-  const regionData = territories.reduce((acc, territory) => {
-    if (!acc[territory.region]) {
-      acc[territory.region] = { region: territory.region, revenue: 0, customers: 0, territories: 0 };
-    }
-    acc[territory.region].revenue += territory.revenue;
-    acc[territory.region].customers += territory.customers;
-    acc[territory.region].territories += 1;
-    return acc;
-  }, {} as Record<string, any>);
-
-  const chartData = Object.values(regionData);
-
-  const performanceData = territories.map(territory => ({
-    name: territory.name,
-    achievement: territory.achievement,
-    growth: territory.growth,
-    revenue: territory.revenue / 1000000
-  }));
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Territory Management</h1>
         <div className="flex space-x-2">
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Territory Rules
+          <Button variant="outline" onClick={loadData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" onClick={handleCreateRule}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Rule
           </Button>
           <Button onClick={handleCreateTerritory}>
             <Plus className="h-4 w-4 mr-2" />
@@ -346,14 +268,8 @@ const TerritoryManagement: React.FC = () => {
         {territoryMetrics.map((metric, index) => (
           <Card key={index}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{metric.title}</p>
-                  <div className="text-2xl font-bold">{metric.value}</div>
-                  <div className="text-sm text-green-600">{metric.change}</div>
-                </div>
-                <metric.icon className="h-8 w-8 text-muted-foreground" />
-              </div>
+              <div className="text-2xl font-bold">{metric.value}</div>
+              <div className="text-sm text-muted-foreground">{metric.title}</div>
             </CardContent>
           </Card>
         ))}
@@ -361,9 +277,9 @@ const TerritoryManagement: React.FC = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="territories">Territories</TabsTrigger>
+          <TabsTrigger value="territories">Territories ({territories.length})</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="rules">Assignment Rules</TabsTrigger>
+          <TabsTrigger value="rules">Assignment Rules ({territoryRules.length})</TabsTrigger>
           <TabsTrigger value="planning">Territory Planning</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
@@ -374,120 +290,43 @@ const TerritoryManagement: React.FC = () => {
               <CardTitle>Territory Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between mb-4">
-                <div className="flex space-x-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search territories..." 
-                      className="pl-8 w-80"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Select value={filterRegion} onValueChange={setFilterRegion}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter by region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Regions</SelectItem>
-                      <SelectItem value="North America">North America</SelectItem>
-                      <SelectItem value="Europe">Europe</SelectItem>
-                      <SelectItem value="Asia Pacific">Asia Pacific</SelectItem>
-                      <SelectItem value="Latin America">Latin America</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex mb-4">
+                <div className="relative w-72">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search territories..." 
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
-
+              
               {isLoading ? (
                 <div className="h-64 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <DataTable columns={territoryColumns} data={filteredTerritories} />
+                <EnhancedDataTable 
+                  columns={territoryColumns}
+                  data={filteredTerritories}
+                  actions={territoryActions}
+                  exportable={true}
+                  refreshable={true}
+                  onRefresh={loadData}
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Regional Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="region" />
-                    <YAxis />
-                    <Tooltip formatter={(value, name) => [
-                      name === 'revenue' ? `$${(Number(value) / 1000000).toFixed(1)}M` : value,
-                      name === 'revenue' ? 'Revenue' : name === 'customers' ? 'Customers' : 'Territories'
-                    ]} />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#8884d8" name="Revenue (M)" />
-                    <Bar dataKey="customers" fill="#82ca9d" name="Customers" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Territory Achievement vs Growth</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={performanceData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="achievement" stroke="#8884d8" name="Achievement %" />
-                    <Line type="monotone" dataKey="growth" stroke="#82ca9d" name="Growth %" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
             <CardHeader>
-              <CardTitle>Territory Revenue Distribution</CardTitle>
+              <CardTitle>Territory Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={performanceData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, revenue }) => `${name}: $${revenue.toFixed(1)}M`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="revenue"
-                  >
-                    {performanceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`$${Number(value).toFixed(1)}M`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
+              <p className="text-muted-foreground">Performance charts by region and territory.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -495,13 +334,7 @@ const TerritoryManagement: React.FC = () => {
         <TabsContent value="rules" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Territory Assignment Rules</CardTitle>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Rule
-                </Button>
-              </div>
+              <CardTitle>Territory Assignment Rules</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -509,84 +342,26 @@ const TerritoryManagement: React.FC = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <DataTable columns={ruleColumns} data={territoryRules} />
+                <EnhancedDataTable 
+                  columns={ruleColumns}
+                  data={territoryRules}
+                  actions={ruleActions}
+                  exportable={true}
+                />
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Rule Execution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Execute territory assignment rules to automatically assign accounts to territories based on configured criteria.
-                </p>
-                <div className="flex space-x-2">
-                  <Button>Run All Rules</Button>
-                  <Button variant="outline">Preview Changes</Button>
-                  <Button variant="outline">Validate Rules</Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="planning" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Territory Optimization</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Analyze and optimize territory boundaries for better coverage and performance.
-                  </p>
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start">
-                      Analyze Territory Balance
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Suggest Boundary Changes
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      Workload Distribution
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Capacity Planning</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Plan territory capacity and resource allocation.
-                  </p>
-                  <div className="space-y-3">
-                    {territories.map(territory => (
-                      <div key={territory.id} className="flex justify-between items-center p-3 border rounded">
-                        <div>
-                          <div className="font-medium">{territory.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {territory.customers} customers • {territory.prospects} prospects
-                          </div>
-                        </div>
-                        <Badge variant={territory.customers > 150 ? 'destructive' : territory.customers > 100 ? 'secondary' : 'default'}>
-                          {territory.customers > 150 ? 'Overloaded' : territory.customers > 100 ? 'High' : 'Normal'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Territory Planning</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Territory optimization and capacity planning tools.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
@@ -604,14 +379,6 @@ const TerritoryManagement: React.FC = () => {
                   <span>Coverage Analysis</span>
                   <span className="text-xs text-muted-foreground">Market coverage assessment</span>
                 </Button>
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <span>Sales Rep Workload</span>
-                  <span className="text-xs text-muted-foreground">Workload distribution analysis</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <span>Territory Comparison</span>
-                  <span className="text-xs text-muted-foreground">Side-by-side territory comparison</span>
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -621,37 +388,23 @@ const TerritoryManagement: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Territory' : 'Create New Territory'}</DialogTitle>
+            <DialogTitle>
+              {dialogType === 'territory' ? (isEditing ? 'Edit Territory' : 'Create New Territory') : (isEditing ? 'Edit Rule' : 'Create Assignment Rule')}
+            </DialogTitle>
           </DialogHeader>
-          <TerritoryForm 
-            territory={selectedTerritory}
-            onSave={(territoryData) => {
-              if (isEditing && selectedTerritory) {
-                setTerritories(prev => prev.map(t => 
-                  t.id === selectedTerritory.id ? { ...t, ...territoryData } : t
-                ));
-                toast({ title: 'Territory Updated', description: 'Territory has been successfully updated.' });
-              } else {
-                const newTerritory: Territory = {
-                  id: `TERR-${String(territories.length + 1).padStart(3, '0')}`,
-                  customers: 0,
-                  prospects: 0,
-                  revenue: 0,
-                  achievement: 0,
-                  lastQuarter: 0,
-                  growth: 0,
-                  countries: [],
-                  states: [],
-                  cities: [],
-                  ...territoryData as Territory
-                };
-                setTerritories(prev => [...prev, newTerritory]);
-                toast({ title: 'Territory Created', description: 'New territory has been successfully created.' });
-              }
-              setIsDialogOpen(false);
-            }}
-            onCancel={() => setIsDialogOpen(false)}
-          />
+          {dialogType === 'territory' ? (
+            <TerritoryForm 
+              territory={selectedItem as Territory | null}
+              onSave={handleSaveTerritory}
+              onCancel={() => setIsDialogOpen(false)}
+            />
+          ) : (
+            <TerritoryRuleForm 
+              rule={selectedItem as TerritoryRule | null}
+              onSave={handleSaveRule}
+              onCancel={() => setIsDialogOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
@@ -665,36 +418,24 @@ const TerritoryForm: React.FC<{
 }> = ({ territory, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     name: territory?.name || '',
-    region: territory?.region || '',
+    region: territory?.region || 'North America' as const,
     salesRep: territory?.salesRep || '',
     manager: territory?.manager || '',
     target: territory?.target || 0,
-    status: territory?.status || 'Active'
+    status: territory?.status || 'Active' as const
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4 py-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="name">Territory Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            required
-          />
+          <Label>Territory Name</Label>
+          <Input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} />
         </div>
         <div>
-          <Label htmlFor="region">Region</Label>
-          <Select value={formData.region} onValueChange={(value) => setFormData(prev => ({ ...prev, region: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select region" />
-            </SelectTrigger>
+          <Label>Region</Label>
+          <Select value={formData.region} onValueChange={(v: any) => setFormData(p => ({ ...p, region: v }))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="North America">North America</SelectItem>
               <SelectItem value="Europe">Europe</SelectItem>
@@ -705,37 +446,21 @@ const TerritoryForm: React.FC<{
           </Select>
         </div>
         <div>
-          <Label htmlFor="salesRep">Sales Representative</Label>
-          <Input
-            id="salesRep"
-            value={formData.salesRep}
-            onChange={(e) => setFormData(prev => ({ ...prev, salesRep: e.target.value }))}
-            required
-          />
+          <Label>Sales Representative</Label>
+          <Input value={formData.salesRep} onChange={(e) => setFormData(p => ({ ...p, salesRep: e.target.value }))} />
         </div>
         <div>
-          <Label htmlFor="manager">Territory Manager</Label>
-          <Input
-            id="manager"
-            value={formData.manager}
-            onChange={(e) => setFormData(prev => ({ ...prev, manager: e.target.value }))}
-          />
+          <Label>Territory Manager</Label>
+          <Input value={formData.manager} onChange={(e) => setFormData(p => ({ ...p, manager: e.target.value }))} />
         </div>
         <div>
-          <Label htmlFor="target">Revenue Target</Label>
-          <Input
-            id="target"
-            type="number"
-            value={formData.target}
-            onChange={(e) => setFormData(prev => ({ ...prev, target: Number(e.target.value) }))}
-          />
+          <Label>Revenue Target</Label>
+          <Input type="number" value={formData.target} onChange={(e) => setFormData(p => ({ ...p, target: Number(e.target.value) }))} />
         </div>
         <div>
-          <Label htmlFor="status">Status</Label>
-          <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+          <Label>Status</Label>
+          <Select value={formData.status} onValueChange={(v: any) => setFormData(p => ({ ...p, status: v }))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Inactive">Inactive</SelectItem>
@@ -744,16 +469,59 @@ const TerritoryForm: React.FC<{
           </Select>
         </div>
       </div>
-
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          Save Territory
-        </Button>
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={() => onSave(formData)}>{territory ? 'Update' : 'Create'}</Button>
       </div>
-    </form>
+    </div>
+  );
+};
+
+const TerritoryRuleForm: React.FC<{
+  rule: TerritoryRule | null;
+  onSave: (data: Partial<TerritoryRule>) => void;
+  onCancel: () => void;
+}> = ({ rule, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: rule?.name || '',
+    type: rule?.type || 'Geographic' as const,
+    criteria: rule?.criteria || '',
+    priority: rule?.priority || 1
+  });
+
+  return (
+    <div className="space-y-4 py-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Rule Name</Label>
+          <Input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} />
+        </div>
+        <div>
+          <Label>Type</Label>
+          <Select value={formData.type} onValueChange={(v: any) => setFormData(p => ({ ...p, type: v }))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Geographic">Geographic</SelectItem>
+              <SelectItem value="Industry">Industry</SelectItem>
+              <SelectItem value="Company Size">Company Size</SelectItem>
+              <SelectItem value="Revenue">Revenue</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Criteria</Label>
+          <Input value={formData.criteria} onChange={(e) => setFormData(p => ({ ...p, criteria: e.target.value }))} />
+        </div>
+        <div>
+          <Label>Priority</Label>
+          <Input type="number" value={formData.priority} onChange={(e) => setFormData(p => ({ ...p, priority: Number(e.target.value) }))} />
+        </div>
+      </div>
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={() => onSave(formData)}>{rule ? 'Update' : 'Create'}</Button>
+      </div>
+    </div>
   );
 };
 

@@ -1,254 +1,222 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ArrowLeft, Warehouse, MapPin, Users, Activity, Plus, Edit } from 'lucide-react';
+import { ArrowLeft, Warehouse, Plus, Edit, Trash2, Eye, MapPin, Users } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
-import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
-import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
-import DataTable from '../../components/data/DataTable';
+import EnhancedDataTable, { EnhancedColumn, TableAction } from '../../components/data/EnhancedDataTable';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
+import { useToast } from '../../hooks/use-toast';
+import { generateId } from '../../lib/localCrud';
+
+const warehouseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1, 'Warehouse name is required'),
+  location: z.string().min(1, 'Location is required'),
+  capacity: z.coerce.number().int().min(0, 'Capacity required'),
+  occupied: z.coerce.number().int().min(0, 'Occupied required'),
+  manager: z.string().min(1, 'Manager is required'),
+  status: z.enum(['Active', 'Inactive', 'Maintenance']),
+  type: z.enum(['Distribution Center', 'Storage Warehouse', 'Fulfillment Center']),
+});
+
+type Warehouse = z.infer<typeof warehouseSchema>;
+
+const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Phoenix, AZ', 'Seattle, WA', 'Miami, FL', 'Denver, CO'];
+const managers = ['John Smith', 'Maria Garcia', 'Robert Johnson', 'Lisa Wong', 'Tom Harris', 'Amy Lee', 'Mike Brown', 'Emma van Berg'];
+
+const seedData: Warehouse[] = [
+  { id: generateId('wh'), name: 'Main Warehouse NY', location: 'New York, NY', capacity: 10000, occupied: 7500, manager: 'John Smith', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Distribution Center CA', location: 'Los Angeles, CA', capacity: 15000, occupied: 12000, manager: 'Maria Garcia', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Regional Hub TX', location: 'Houston, TX', capacity: 8000, occupied: 5200, manager: 'Robert Johnson', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Midwest Warehouse IL', location: 'Chicago, IL', capacity: 12000, occupied: 9000, manager: 'Lisa Wong', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'West Coast DC', location: 'Phoenix, AZ', capacity: 9000, occupied: 6300, manager: 'Tom Harris', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Northwest Facility', location: 'Seattle, WA', capacity: 7000, occupied: 4200, manager: 'Amy Lee', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Southeast Hub', location: 'Miami, FL', capacity: 8500, occupied: 6800, manager: 'Mike Brown', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Mountain Region DC', location: 'Denver, CO', capacity: 6000, occupied: 3000, manager: 'Emma van Berg', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'East Coast Warehouse', location: 'New York, NY', capacity: 11000, occupied: 8800, manager: 'David Chen', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Central Distribution', location: 'Chicago, IL', capacity: 13000, occupied: 10400, manager: 'Sarah Johnson', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Southwest Facility', location: 'Phoenix, AZ', capacity: 7500, occupied: 4500, manager: 'James Wilson', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Pacific Center', location: 'Los Angeles, CA', capacity: 14000, occupied: 11200, manager: 'Karen Martinez', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Atlantic Warehouse', location: 'Miami, FL', capacity: 9500, occupied: 7600, manager: 'Chris Taylor', status: 'Maintenance', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Gulf Coast DC', location: 'Houston, TX', capacity: 10500, occupied: 8400, manager: 'Patricia Davis', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Great Lakes Facility', location: 'Chicago, IL', capacity: 8000, occupied: 6400, manager: 'Mark Miller', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Southwest Hub', location: 'Phoenix, AZ', capacity: 6800, occupied: 4080, manager: 'Nancy White', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Northern Warehouse', location: 'Seattle, WA', capacity: 9200, occupied: 7360, manager: 'Paul Anderson', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Coastal DC', location: 'Los Angeles, CA', capacity: 11500, occupied: 9200, manager: 'Laura Thomas', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Central Plains Warehouse', location: 'Denver, CO', capacity: 5500, occupied: 3300, manager: 'Steven Jackson', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Eastern Seaboard', location: 'New York, NY', capacity: 12500, occupied: 10000, manager: 'Barbara Moore', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Texas Distribution', location: 'Houston, TX', capacity: 11800, occupied: 9440, manager: 'Richard Martin', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Golden State Facility', location: 'Los Angeles, CA', capacity: 10200, occupied: 8160, manager: 'Betty Thompson', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Prairie Warehouse', location: 'Chicago, IL', capacity: 7200, occupied: 5040, manager: 'George Harris', status: 'Inactive', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Desert Center', location: 'Phoenix, AZ', capacity: 8800, occupied: 7040, manager: 'Helen Clark', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Bay Area DC', location: 'Los Angeles, CA', capacity: 13500, occupied: 10800, manager: 'Edward Lewis', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Rocky Mountain Warehouse', location: 'Denver, CO', capacity: 4800, occupied: 2880, manager: 'Dorothy Walker', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Sunshine State Facility', location: 'Miami, FL', capacity: 10800, occupied: 8640, manager: 'Kenneth Hall', status: 'Active', type: 'Fulfillment Center' },
+  { id: generateId('wh'), name: 'Windy City DC', location: 'Chicago, IL', capacity: 14200, occupied: 11360, manager: 'Carol Allen', status: 'Active', type: 'Distribution Center' },
+  { id: generateId('wh'), name: 'Emerald City Warehouse', location: 'Seattle, WA', capacity: 8200, occupied: 6560, manager: 'Ronald Young', status: 'Active', type: 'Storage Warehouse' },
+  { id: generateId('wh'), name: 'Liberty Facility', location: 'New York, NY', capacity: 9800, occupied: 7840, manager: 'Sandra King', status: 'Active', type: 'Fulfillment Center' },
+];
 
 const WarehouseManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { isEnabled } = useVoiceAssistantContext();
-  const { speak } = useVoiceAssistant();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { toast } = useToast();
+  const [data, setData] = useState<Warehouse[]>(() => seedData);
+  const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [editing, setEditing] = useState<Warehouse | null>(null);
+  const [viewing, setViewing] = useState<Warehouse | null>(null);
 
-  useEffect(() => {
-    if (isEnabled) {
-      speak('Welcome to Warehouse Management. Manage warehouse operations, locations, and staff assignments.');
+  const refresh = () => {
+    setData([...data]);
+  };
+
+  const columns: EnhancedColumn[] = useMemo(() => [
+    { key: 'name', header: 'Warehouse Name', sortable: true, searchable: true },
+    { key: 'location', header: 'Location', sortable: true, searchable: true },
+    { key: 'manager', header: 'Manager', sortable: true },
+    { key: 'capacity', header: 'Capacity', sortable: true },
+    { key: 'occupied', header: 'Occupied', sortable: true },
+    { key: 'type', header: 'Type', sortable: true, filterable: true, filterOptions: ['Distribution Center', 'Storage Warehouse', 'Fulfillment Center'].map(t => ({ label: t, value: t })) },
+    { key: 'status', header: 'Status', sortable: true, filterable: true, filterOptions: ['Active', 'Inactive', 'Maintenance'].map(s => ({ label: s, value: s })) },
+  ], []);
+
+  const actions: TableAction[] = [
+    { label: 'View', icon: <Eye className="h-4 w-4" />, onClick: (row: Warehouse) => { setViewing(row); setViewOpen(true); } },
+    { label: 'Edit', icon: <Edit className="h-4 w-4" />, onClick: (row: Warehouse) => { setEditing(row); setOpen(true); } },
+    { label: 'Delete', icon: <Trash2 className="h-4 w-4" />, onClick: (row: Warehouse) => { setData(data.filter(d => d.id !== row.id)); toast({ title: 'Deleted', description: `Warehouse ${row.name} removed` }); }, variant: 'destructive' }
+  ];
+
+  const form = useForm<Warehouse>({
+    resolver: zodResolver(warehouseSchema),
+    defaultValues: { id: '', name: '', location: '', capacity: 0, occupied: 0, manager: '', status: 'Active', type: 'Distribution Center' }
+  });
+
+  const openCreate = () => { setEditing(null); form.reset({ id: generateId('wh'), name: '', location: '', capacity: 0, occupied: 0, manager: '', status: 'Active', type: 'Distribution Center' }); setOpen(true); };
+  useEffect(() => { if (editing) form.reset(editing); }, [editing]);
+
+  const onSubmit = (values: Warehouse) => {
+    const idx = data.findIndex(d => d.id === values.id);
+    if (idx >= 0) {
+      setData(data.map((d, i) => i === idx ? values : d));
+    } else {
+      setData([values, ...data]);
     }
-  }, [isEnabled, speak]);
+    setOpen(false);
+    toast({ title: editing ? 'Warehouse Updated' : 'Warehouse Created', description: values.name });
+  };
 
-  const warehouseData = [
-    { id: 'WH-001', name: 'Main Warehouse', location: 'New York', capacity: '10,000', occupied: '7,500', utilization: '75%', status: 'Active' },
-    { id: 'WH-002', name: 'Distribution Center', location: 'California', capacity: '15,000', occupied: '12,000', utilization: '80%', status: 'Active' },
-    { id: 'WH-003', name: 'Regional Hub', location: 'Texas', capacity: '8,000', occupied: '5,200', utilization: '65%', status: 'Active' },
-  ];
-
-  const locationData = [
-    { id: 'LOC-A001', warehouse: 'Main Warehouse', zone: 'Zone A', aisle: 'A01', shelf: '001', bin: 'A', material: 'Steel Pipes', quantity: '500' },
-    { id: 'LOC-B002', warehouse: 'Main Warehouse', zone: 'Zone B', aisle: 'B01', shelf: '002', bin: 'B', material: 'Copper Wire', quantity: '150' },
-    { id: 'LOC-C003', warehouse: 'Distribution Center', zone: 'Zone C', aisle: 'C01', shelf: '003', bin: 'C', material: 'Aluminum Sheets', quantity: '800' },
-  ];
-
-  const staffData = [
-    { id: 'ST-001', name: 'John Smith', role: 'Warehouse Manager', warehouse: 'Main Warehouse', shift: 'Day', status: 'Active' },
-    { id: 'ST-002', name: 'Maria Garcia', role: 'Picker', warehouse: 'Main Warehouse', shift: 'Day', status: 'Active' },
-    { id: 'ST-003', name: 'Robert Johnson', role: 'Forklift Operator', warehouse: 'Distribution Center', shift: 'Night', status: 'Active' },
-  ];
-
-  const warehouseColumns = [
-    { key: 'name', header: 'Warehouse Name' },
-    { key: 'location', header: 'Location' },
-    { key: 'capacity', header: 'Capacity (sqm)' },
-    { key: 'occupied', header: 'Occupied (sqm)' },
-    { key: 'utilization', header: 'Utilization' },
-    { 
-      key: 'status', 
-      header: 'Status',
-      render: (value: string) => <Badge variant="default">{value}</Badge>
-    },
-    { 
-      key: 'actions', 
-      header: 'Actions',
-      render: () => <Button variant="outline" size="sm"><Edit className="h-3 w-3" /></Button>
-    }
-  ];
-
-  const locationColumns = [
-    { key: 'warehouse', header: 'Warehouse' },
-    { key: 'zone', header: 'Zone' },
-    { key: 'aisle', header: 'Aisle' },
-    { key: 'shelf', header: 'Shelf' },
-    { key: 'material', header: 'Material' },
-    { key: 'quantity', header: 'Quantity' },
-  ];
-
-  const staffColumns = [
-    { key: 'name', header: 'Name' },
-    { key: 'role', header: 'Role' },
-    { key: 'warehouse', header: 'Warehouse' },
-    { key: 'shift', header: 'Shift' },
-    { 
-      key: 'status', 
-      header: 'Status',
-      render: (value: string) => <Badge variant="default">{value}</Badge>
-    },
-  ];
+  const totalCapacity = data.reduce((sum, w) => sum + w.capacity, 0);
+  const totalOccupied = data.reduce((sum, w) => sum + w.occupied, 0);
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="mr-4"
-          onClick={() => navigate('/supply-chain')}
-        >
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center mb-2">
+        <Button variant="outline" size="sm" className="mr-4" onClick={() => navigate('/supply-chain')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <PageHeader
-          title="Warehouse Management"
-          description="Manage warehouse operations, locations, and staff"
-          voiceIntroduction="Welcome to Warehouse Management. Optimize your warehouse operations."
-        />
+        <PageHeader title="Warehouse Management" description="Manage warehouse operations, locations, and staff" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center">
-            <Warehouse className="h-8 w-8 text-blue-600 mr-3" />
-            <div>
-              <h3 className="text-2xl font-bold">3</h3>
-              <p className="text-sm text-gray-600">Active Warehouses</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <MapPin className="h-8 w-8 text-green-600 mr-3" />
-            <div>
-              <h3 className="text-2xl font-bold">1,247</h3>
-              <p className="text-sm text-gray-600">Storage Locations</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-purple-600 mr-3" />
-            <div>
-              <h3 className="text-2xl font-bold">45</h3>
-              <p className="text-sm text-gray-600">Warehouse Staff</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <Activity className="h-8 w-8 text-orange-600 mr-3" />
-            <div>
-              <h3 className="text-2xl font-bold">73%</h3>
-              <p className="text-sm text-gray-600">Avg Utilization</p>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4"><div className="flex items-center"><Warehouse className="h-8 w-8 text-blue-600 mr-3"/><div><h3 className="text-2xl font-bold">{data.length}</h3><p className="text-sm text-gray-600">Warehouses</p></div></div></Card>
+        <Card className="p-4"><div className="flex items-center"><Warehouse className="h-8 w-8 text-green-600 mr-3"/><div><h3 className="text-2xl font-bold">{totalCapacity.toLocaleString()}</h3><p className="text-sm text-gray-600">Total Capacity</p></div></div></Card>
+        <Card className="p-4"><div className="flex items-center"><MapPin className="h-8 w-8 text-purple-600 mr-3"/><div><h3 className="text-2xl font-bold">{Math.round(totalOccupied / totalCapacity * 100)}%</h3><p className="text-sm text-gray-600">Avg Utilization</p></div></div></Card>
+        <Card className="p-4"><div className="flex items-center"><Users className="h-8 w-8 text-orange-600 mr-3"/><div><h3 className="text-2xl font-bold">{data.filter(w => w.status === 'Active').length}</h3><p className="text-sm text-gray-600">Active</p></div></div></Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
-          <TabsTrigger value="locations">Locations</TabsTrigger>
-          <TabsTrigger value="staff">Staff</TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center"><Warehouse className="h-5 w-5 mr-2" /> Warehouses ({data.length})</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" /> Add Warehouse</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editing ? 'Edit Warehouse' : 'Add Warehouse'}</DialogTitle></DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>Warehouse Name</FormLabel><FormControl><Input placeholder="Name" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="location" render={({ field }) => (
+                    <FormItem><FormLabel>Location</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
+                        <SelectContent>{locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="manager" render={({ field }) => (
+                    <FormItem><FormLabel>Manager</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select manager" /></SelectTrigger></FormControl>
+                        <SelectContent>{managers.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="capacity" render={({ field }) => (
+                    <FormItem><FormLabel>Capacity (sqm)</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="occupied" render={({ field }) => (
+                    <FormItem><FormLabel>Occupied (sqm)</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="type" render={({ field }) => (
+                    <FormItem><FormLabel>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                        <SelectContent>{['Distribution Center', 'Storage Warehouse', 'Fulfillment Center'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="status" render={({ field }) => (
+                    <FormItem><FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
+                        <SelectContent>{['Active', 'Inactive', 'Maintenance'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <FormMessage /></FormItem>
+                  )} />
+                  <DialogFooter className="col-span-full mt-2">
+                    <Button type="submit">{editing ? 'Save Changes' : 'Create'}</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <EnhancedDataTable columns={columns} data={data as any} actions={actions as any} searchPlaceholder="Search warehouses..." refreshable={true} onRefresh={refresh} exportable={true} />
+        </CardContent>
+      </Card>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Warehouse Utilization</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Main Warehouse</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: '75%' }}></div>
-                    </div>
-                    <span className="text-sm">75%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Distribution Center</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '80%' }}></div>
-                    </div>
-                    <span className="text-sm">80%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Regional Hub</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                    <span className="text-sm">65%</span>
-                  </div>
-                </div>
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Warehouse Details</DialogTitle></DialogHeader>
+          {viewing && (
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="text-sm font-medium text-gray-500">Name</label><p className="text-lg font-semibold">{viewing.name}</p></div>
+              <div><label className="text-sm font-medium text-gray-500">Status</label><p><Badge variant={viewing.status === 'Active' ? 'default' : viewing.status === 'Maintenance' ? 'secondary' : 'destructive'}>{viewing.status}</Badge></p></div>
+              <div><label className="text-sm font-medium text-gray-500">Location</label><p className="flex items-center"><MapPin className="h-4 w-4 mr-2" />{viewing.location}</p></div>
+              <div><label className="text-sm font-medium text-gray-500">Manager</label><p className="flex items-center"><Users className="h-4 w-4 mr-2" />{viewing.manager}</p></div>
+              <div><label className="text-sm font-medium text-gray-500">Capacity</label><p>{viewing.capacity.toLocaleString()} sqm</p></div>
+              <div><label className="text-sm font-medium text-gray-500">Occupied</label><p>{viewing.occupied.toLocaleString()} sqm</p></div>
+              <div className="col-span-2"><label className="text-sm font-medium text-gray-500">Utilization</label>
+                <div className="w-full bg-gray-200 rounded-full h-4 mt-2"><div className="bg-blue-600 h-4 rounded-full" style={{ width: `${(viewing.occupied / viewing.capacity) * 100}%` }}></div></div>
+                <p className="text-right mt-1">{Math.round(viewing.occupied / viewing.capacity * 100)}%</p>
               </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Daily Activities</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Goods Receipts</span>
-                  <span className="font-semibold">47</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Goods Issues</span>
-                  <span className="font-semibold">89</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Transfers</span>
-                  <span className="font-semibold">23</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cycle Counts</span>
-                  <span className="font-semibold">12</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="warehouses" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Warehouse Facilities</h2>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Warehouse
-            </Button>
-          </div>
-          
-          <Card className="p-6">
-            <DataTable columns={warehouseColumns} data={warehouseData} />
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="locations" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Storage Locations</h2>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Location
-            </Button>
-          </div>
-          
-          <Card className="p-6">
-            <DataTable columns={locationColumns} data={locationData} />
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="staff" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Warehouse Staff</h2>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Staff Member
-            </Button>
-          </div>
-          
-          <Card className="p-6">
-            <DataTable columns={staffColumns} data={staffData} />
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

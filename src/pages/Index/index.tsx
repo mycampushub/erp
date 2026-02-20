@@ -8,6 +8,7 @@ import AppsSection from './components/AppsSection';
 import InsightSection from './components/InsightSection';
 import TodoSection from './components/TodoSection';
 import { Edit, Settings } from 'lucide-react';
+import { toast } from '../../components/ui/use-toast';
 
 const Index: React.FC = () => {
   const { isEnabled } = useVoiceAssistantContext();
@@ -26,15 +27,26 @@ const Index: React.FC = () => {
   }, [isEnabled, speak]);
 
   const handleManageNews = () => {
-    console.log('Manage news clicked');
+    toast({
+      title: "Manage News",
+      description: "Opening news management...",
+    });
+    setShowNewsDropdown(false);
   };
 
   const handleHomeSettings = () => {
-    console.log('Home settings clicked');
+    toast({
+      title: "Home Settings",
+      description: "Opening home settings...",
+    });
   };
 
   const handleManagePages = () => {
-    console.log('Manage pages clicked');
+    toast({
+      title: "Manage Pages",
+      description: "Opening pages management...",
+    });
+    setShowPagesDropdown(false);
   };
 
   return (

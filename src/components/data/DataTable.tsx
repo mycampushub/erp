@@ -2,19 +2,19 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export interface Column {
+export interface Column<T = object> {
   key: string;
   header: string;
-  render?: (value: any, row?: any) => React.ReactNode;
+  render?: (value: unknown, row?: T) => React.ReactNode;
 }
 
-interface DataTableProps {
-  columns: Column[];
-  data: any[];
+interface DataTableProps<T = object> {
+  columns: Column<T>[];
+  data: T[];
   className?: string;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ columns, data, className = "" }) => {
+function DataTable<T extends object = object>({ columns, data, className = "" }: DataTableProps<T>) {
   return (
     <Table className={className}>
       <TableHeader>
@@ -29,7 +29,7 @@ const DataTable: React.FC<DataTableProps> = ({ columns, data, className = "" }) 
           <TableRow key={index}>
             {columns.map((column) => (
               <TableCell key={column.key}>
-                {column.render ? column.render(row[column.key], row) : row[column.key]}
+                {column.render ? column.render(row[column.key as keyof T], row) : String(row[column.key as keyof T] ?? '')}
               </TableCell>
             ))}
           </TableRow>
@@ -37,6 +37,6 @@ const DataTable: React.FC<DataTableProps> = ({ columns, data, className = "" }) 
       </TableBody>
     </Table>
   );
-};
+}
 
 export default DataTable;

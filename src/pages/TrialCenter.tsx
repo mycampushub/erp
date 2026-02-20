@@ -1,25 +1,19 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import SAPSection from '../components/SAPSection';
 import SAPTile from '../components/SAPTile';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { useVoiceAssistantContext } from '../context/VoiceAssistantContext';
 
 const TrialCenter: React.FC = () => {
-  const [isVoiceAssistantEnabled, setIsVoiceAssistantEnabled] = useState(false);
+  const { isEnabled: isVoiceAssistantEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   
   useEffect(() => {
-    const checkVoiceAssistant = () => {
-      const enabled = localStorage.getItem('voiceAssistantEnabled') === 'true';
-      setIsVoiceAssistantEnabled(enabled);
-      
-      if (enabled) {
-        speak("Welcome to the Trial Center. This is where you can explore and test SAP S/4HANA features in a safe environment.");
-      }
-    };
-    
-    checkVoiceAssistant();
-  }, [speak]);
+    if (isVoiceAssistantEnabled) {
+      speak("Welcome to the Trial Center. This is where you can explore and test SAP S/4HANA features in a safe environment.");
+    }
+  }, [isVoiceAssistantEnabled, speak]);
 
   return (
     <div>

@@ -13,17 +13,6 @@ const SAPLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   
-  // Initialize the voice assistant state from localStorage on component mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('voiceAssistantEnabled') === 'true';
-    setIsVoiceAssistantEnabled(savedState);
-  }, []);
-  
-  // Store the voice assistant state in localStorage to ensure consistency
-  useEffect(() => {
-    localStorage.setItem('voiceAssistantEnabled', isVoiceAssistantEnabled.toString());
-  }, [isVoiceAssistantEnabled]);
-  
   const toggleVoiceAssistant = () => {
     setIsVoiceAssistantEnabled(prevState => !prevState);
   };

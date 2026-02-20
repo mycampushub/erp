@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Calendar, Clock, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Clock, RefreshCw, ChevronDown } from 'lucide-react';
 
 interface TodoSectionProps {
   title: string;
@@ -8,16 +7,17 @@ interface TodoSectionProps {
 }
 
 const TodoSection: React.FC<TodoSectionProps> = ({ title, count = 0 }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="sap-section-title flex items-center">
           {`${title} (${count})`}
           <button 
-            onClick={() => {}}
+            onClick={() => setIsExpanded(!isExpanded)}
             className="ml-2 text-blue-600"
           >
-            <span className="text-xs">▼</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
         </h2>
         

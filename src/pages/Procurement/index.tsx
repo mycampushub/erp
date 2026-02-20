@@ -61,15 +61,15 @@ const Procurement: React.FC = () => {
   }, [isEnabled, speak]);
   
   const handleNavigateToSupplier = (supplierId: string) => {
-    navigate(`/procurement/supplier/${supplierId}`);
+    navigate(`/procurement/supplier-management/${supplierId}`);
+  };
+  
+  const handleNavigateToPurchaseOrders = () => {
+    navigate('/procurement/purchase-orders');
   };
   
   const handleCreatePurchaseOrder = () => {
-    toast({
-      title: "Create Purchase Order",
-      description: "Purchase order creation form has been opened.",
-    });
-    // In a real application, this would open a form or modal
+    navigate('/procurement/purchase-orders');
   };
 
   // Order columns configuration for DataTable
@@ -316,16 +316,28 @@ const Procurement: React.FC = () => {
                   <span className="w-6 h-6 mr-2 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full text-xs">+</span>
                   Create Purchase Order
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/procurement/purchase-orders')}
+                  className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium"
+                >
                   Purchase Order Overview
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/procurement/purchase-requisitions')}
+                  className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium"
+                >
                   Purchase Requisitions
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/procurement/goods-receipt')}
+                  className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium"
+                >
                   Goods Receipt
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/procurement/invoice-verification')}
+                  className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium"
+                >
                   Invoice Verification
                 </button>
               </div>
@@ -340,16 +352,16 @@ const Procurement: React.FC = () => {
               </div>
               
               <div className="space-y-3">
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => toast({ title: "Approval Workflows", description: "Configuration coming soon" })}>
                   Approval Workflows
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => toast({ title: "Purchase Types", description: "Configuration coming soon" })}>
                   Purchase Types
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => toast({ title: "Material Groups", description: "Configuration coming soon" })}>
                   Material Groups
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => toast({ title: "Purchasing Organizations", description: "Configuration coming soon" })}>
                   Purchasing Organizations
                 </button>
               </div>
@@ -364,16 +376,16 @@ const Procurement: React.FC = () => {
               </div>
               
               <div className="space-y-3">
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => navigate('/procurement/rfq')}>
                   RFQ Management
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => navigate('/procurement/bidding-auctions')}>
                   Bidding & Auctions
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => navigate('/procurement/contract-management')}>
                   Contract Management
                 </button>
-                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium">
+                <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium" onClick={() => navigate('/procurement/source-determination')}>
                   Source Determination
                 </button>
               </div>
@@ -391,7 +403,7 @@ const Procurement: React.FC = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Supplier Management</h2>
             <Button 
-              onClick={() => toast({ description: "Supplier creation form has been opened" })}
+              onClick={() => navigate('/procurement/supplier-management')}
             >
               Register New Supplier
             </Button>
@@ -424,7 +436,7 @@ const Procurement: React.FC = () => {
                   <span className="font-medium">5</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('supplierDirectory')}>
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/procurement/supplier-management')}>
                 View Directory
               </Button>
             </Card>
@@ -455,7 +467,7 @@ const Procurement: React.FC = () => {
                   <span className="font-medium">3</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/procurement/contract-management')}>
                 Manage Contracts
               </Button>
             </Card>
@@ -486,7 +498,7 @@ const Procurement: React.FC = () => {
                   <span className="font-medium text-red-600">8</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/procurement/supplier-performance')}>
                 View Performance Dashboard
               </Button>
             </Card>
@@ -568,7 +580,7 @@ const Procurement: React.FC = () => {
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full">View All Metrics</Button>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/procurement/analytics')}>View All Metrics</Button>
               </div>
             </Card>
           </div>

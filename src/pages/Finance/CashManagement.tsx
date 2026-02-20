@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { 
   ArrowLeft, 
   Plus, 
@@ -19,7 +20,8 @@ import {
   ArrowDownRight,
   Eye,
   RefreshCw,
-  Download
+  Save,
+  Trash2
 } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
@@ -70,6 +72,25 @@ const CashManagement: React.FC = () => {
   const [cashFlows, setCashFlows] = useState<CashFlow[]>([]);
   const [bankPositions, setBankPositions] = useState<BankPosition[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCashFlowDialogOpen, setIsCashFlowDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [cashFlowForm, setCashFlowForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    type: 'Inflow',
+    amount: '',
+    category: '',
+    account: 'Operating Account',
+    status: 'Planned'
+  });
+  const [paymentForm, setPaymentForm] = useState({
+    vendor: '',
+    amount: '',
+    currency: 'USD',
+    paymentMethod: 'Wire Transfer',
+    scheduledDate: new Date().toISOString().split('T')[0]
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -196,6 +217,94 @@ const CashManagement: React.FC = () => {
     setCashFlows(sampleCashFlows);
     setBankPositions(sampleBankPositions);
     setPayments(samplePayments);
+  };
+
+  const refreshData = () => {
+    setIsLoading(true);
+    loadCashData();
+    setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: 'Data Refreshed',
+        description: 'Bank positions and cash flow data have been updated',
+      });
+    }, 1000);
+  };
+
+  const handleAddCashFlow = () => {
+    if (!cashFlowForm.description || !cashFlowForm.amount || !cashFlowForm.category) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newCashFlow: CashFlow = {
+      id: `cf-${String(cashFlows.length + 1).padStart(3, '0')}`,
+      date: cashFlowForm.date,
+      description: cashFlowForm.description,
+      type: cashFlowForm.type as 'Inflow' | 'Outflow',
+      amount: parseFloat(cashFlowForm.amount),
+      category: cashFlowForm.category,
+      account: cashFlowForm.account,
+      status: cashFlowForm.status as 'Planned' | 'Actual' | 'Forecasted'
+    };
+
+    setCashFlows([...cashFlows, newCashFlow]);
+    setIsCashFlowDialogOpen(false);
+    setCashFlowForm({
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      type: 'Inflow',
+      amount: '',
+      category: '',
+      account: 'Operating Account',
+      status: 'Planned'
+    });
+    
+    toast({
+      title: 'Cash Flow Added',
+      description: `${cashFlowForm.type} entry of $${parseFloat(cashFlowForm.amount).toLocaleString()} has been added`,
+    });
+  };
+
+  const handleProcessPayment = () => {
+    if (!paymentForm.vendor || !paymentForm.amount) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newPayment: PaymentTransaction = {
+      id: `pt-${String(payments.length + 1).padStart(3, '0')}`,
+      paymentId: `PAY-2025-${String(payments.length + 1).padStart(3, '0')}`,
+      vendor: paymentForm.vendor,
+      amount: parseFloat(paymentForm.amount),
+      currency: paymentForm.currency,
+      paymentMethod: paymentForm.paymentMethod as 'Wire Transfer' | 'ACH' | 'Check' | 'Credit Card',
+      status: 'Pending',
+      scheduledDate: paymentForm.scheduledDate
+    };
+
+    setPayments([...payments, newPayment]);
+    setIsPaymentDialogOpen(false);
+    setPaymentForm({
+      vendor: '',
+      amount: '',
+      currency: 'USD',
+      paymentMethod: 'Wire Transfer',
+      scheduledDate: new Date().toISOString().split('T')[0]
+    });
+    
+    toast({
+      title: 'Payment Processed',
+      description: `Payment of $${parseFloat(paymentForm.amount).toLocaleString()} to ${paymentForm.vendor} has been queued`,
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -430,10 +539,109 @@ const CashManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Cash Flow Management
-                <Button onClick={() => toast({ title: 'Add Cash Flow', description: 'Opening cash flow entry form' })}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
-                </Button>
+                <Dialog open={isCashFlowDialogOpen} onOpenChange={setIsCashFlowDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setCashFlowForm({
+                      date: new Date().toISOString().split('T')[0],
+                      description: '',
+                      type: 'Inflow',
+                      amount: '',
+                      category: '',
+                      account: 'Operating Account',
+                      status: 'Planned'
+                    })}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Entry
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Cash Flow Entry</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Date *</Label>
+                          <Input 
+                            type="date"
+                            value={cashFlowForm.date}
+                            onChange={(e) => setCashFlowForm({...cashFlowForm, date: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label>Type *</Label>
+                          <Select value={cashFlowForm.type} onValueChange={(v) => setCashFlowForm({...cashFlowForm, type: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Inflow">Inflow</SelectItem>
+                              <SelectItem value="Outflow">Outflow</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Description *</Label>
+                        <Input 
+                          value={cashFlowForm.description}
+                          onChange={(e) => setCashFlowForm({...cashFlowForm, description: e.target.value})}
+                          placeholder="Enter description"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Amount *</Label>
+                          <Input 
+                            type="number"
+                            value={cashFlowForm.amount}
+                            onChange={(e) => setCashFlowForm({...cashFlowForm, amount: e.target.value})}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <Label>Category *</Label>
+                          <Select value={cashFlowForm.category} onValueChange={(v) => setCashFlowForm({...cashFlowForm, category: v})}>
+                            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Sales Revenue">Sales Revenue</SelectItem>
+                              <SelectItem value="Operating Expenses">Operating Expenses</SelectItem>
+                              <SelectItem value="Payroll">Payroll</SelectItem>
+                              <SelectItem value="Interest Expense">Interest Expense</SelectItem>
+                              <SelectItem value="Capital Expenditure">Capital Expenditure</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Account</Label>
+                          <Select value={cashFlowForm.account} onValueChange={(v) => setCashFlowForm({...cashFlowForm, account: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Operating Account">Operating Account</SelectItem>
+                              <SelectItem value="Savings Account">Savings Account</SelectItem>
+                              <SelectItem value="Credit Line">Credit Line</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Status</Label>
+                          <Select value={cashFlowForm.status} onValueChange={(v) => setCashFlowForm({...cashFlowForm, status: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Planned">Planned</SelectItem>
+                              <SelectItem value="Actual">Actual</SelectItem>
+                              <SelectItem value="Forecasted">Forecasted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsCashFlowDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddCashFlow}><Save className="h-4 w-4 mr-2" />Add Entry</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -453,8 +661,8 @@ const CashManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Bank Position Management
-                <Button onClick={() => toast({ title: 'Refresh Positions', description: 'Updating bank positions' })}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                <Button onClick={refreshData} disabled={isLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </CardTitle>
@@ -476,10 +684,83 @@ const CashManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Payment Processing
-                <Button onClick={() => toast({ title: 'Process Payment', description: 'Opening payment processing form' })}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Process Payment
-                </Button>
+                <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setPaymentForm({
+                      vendor: '',
+                      amount: '',
+                      currency: 'USD',
+                      paymentMethod: 'Wire Transfer',
+                      scheduledDate: new Date().toISOString().split('T')[0]
+                    })}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Process Payment
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Process New Payment</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Vendor *</Label>
+                        <Input 
+                          value={paymentForm.vendor}
+                          onChange={(e) => setPaymentForm({...paymentForm, vendor: e.target.value})}
+                          placeholder="Enter vendor name"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Amount *</Label>
+                          <Input 
+                            type="number"
+                            value={paymentForm.amount}
+                            onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <Label>Currency</Label>
+                          <Select value={paymentForm.currency} onValueChange={(v) => setPaymentForm({...paymentForm, currency: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Payment Method</Label>
+                          <Select value={paymentForm.paymentMethod} onValueChange={(v) => setPaymentForm({...paymentForm, paymentMethod: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Wire Transfer">Wire Transfer</SelectItem>
+                              <SelectItem value="ACH">ACH</SelectItem>
+                              <SelectItem value="Check">Check</SelectItem>
+                              <SelectItem value="Credit Card">Credit Card</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Scheduled Date</Label>
+                          <Input 
+                            type="date"
+                            value={paymentForm.scheduledDate}
+                            onChange={(e) => setPaymentForm({...paymentForm, scheduledDate: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleProcessPayment}><Save className="h-4 w-4 mr-2" />Process Payment</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent>

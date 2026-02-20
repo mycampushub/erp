@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useVoiceAssistantContext } from '../../../context/VoiceAssistantContext';
-import { X } from 'lucide-react';
+import { X, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AppsSectionProps {
   title: string;
@@ -9,8 +10,10 @@ interface AppsSectionProps {
 
 const AppsSection: React.FC<AppsSectionProps> = ({ title }) => {
   const { isEnabled } = useVoiceAssistantContext();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recommended');
   const [showInfo, setShowInfo] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const tabs = [
     { id: 'favorites', label: 'Favorites' },
@@ -37,10 +40,10 @@ const AppsSection: React.FC<AppsSectionProps> = ({ title }) => {
         <h2 className="sap-section-title flex items-center">
           {title}
           <button 
-            onClick={() => {}}
+            onClick={() => setIsExpanded(!isExpanded)}
             className="ml-2 text-blue-600"
           >
-            <span className="text-xs">▼</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
         </h2>
       </div>
@@ -75,7 +78,11 @@ const AppsSection: React.FC<AppsSectionProps> = ({ title }) => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {apps.map((app, index) => (
-            <div key={index} className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer">
+            <div 
+              key={index} 
+              className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer"
+              onClick={() => navigate('/procurement')}
+            >
               <div className={`w-8 h-8 rounded flex items-center justify-center text-white ${app.color}`}>
                 <span>{app.icon}</span>
               </div>
@@ -83,7 +90,10 @@ const AppsSection: React.FC<AppsSectionProps> = ({ title }) => {
             </div>
           ))}
           
-          <div className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer">
+          <div 
+            className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer"
+            onClick={() => navigate('/sales')}
+          >
             <div className="w-8 h-8 rounded bg-purple-600 flex items-center justify-center text-white">
               <span>📬</span>
             </div>
