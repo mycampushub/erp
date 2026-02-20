@@ -3,75 +3,37 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Button } from '../../components/ui/button';
-import { Download, Filter, TrendingUp, TrendingDown, Calendar, Users, DollarSign, Target, RefreshCw } from 'lucide-react';
+import { Download, Filter, TrendingUp, TrendingDown, Calendar, Users, DollarSign, Target } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, AreaChart, Area, ComposedChart } from 'recharts';
-import { listEntities, generateId } from '../../lib/localCrud';
-import { useToast } from '../../hooks/use-toast';
-
-interface SalesOrder {
-  id: string;
-  orderNumber: string;
-  customer: string;
-  totalAmount: number;
-  status: string;
-  salesRep: string;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  status: string;
-}
-
-interface Invoice {
-  id: string;
-  status: string;
-  amount: number;
-}
-
-const sampleOrders: SalesOrder[] = [
-  { id: generateId('so'), orderNumber: 'SO-001', customer: 'Acme Corp', totalAmount: 50000, status: 'Completed', salesRep: 'John Smith' },
-  { id: generateId('so'), orderNumber: 'SO-002', customer: 'Tech Inc', totalAmount: 75000, status: 'In Progress', salesRep: 'Sarah Johnson' },
-];
-
-const sampleCustomers: Customer[] = [
-  { id: generateId('cust'), name: 'Acme Corp', status: 'Active' },
-  { id: generateId('cust'), name: 'Tech Inc', status: 'Active' },
-];
-
-const sampleInvoices: Invoice[] = [
-  { id: generateId('inv'), status: 'Posted', amount: 50000 },
-  { id: generateId('inv'), status: 'Posted', amount: 75000 },
-];
 
 const SalesAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState('12months');
-  const [isLoading, setIsLoading] = useState(false);
-  const [orders, setOrders] = useState<SalesOrder[]>(() => sampleOrders);
-  const [customers, setCustomers] = useState<Customer[]>(() => sampleCustomers);
-  const [invoices, setInvoices] = useState<Invoice[]>(() => sampleInvoices);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = () => {
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  }, []);
 
-  const totalRevenue = invoices.filter(i => i.status === 'Posted').reduce((sum, i) => sum + i.amount, 0);
-  const totalOrders = orders.length;
-  const activeCustomers = customers.filter(c => c.status === 'Active').length;
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const salesData = months.map((month) => ({
-    month,
-    revenue: Math.floor(Math.random() * 100000) + 100000,
-    orders: Math.floor(Math.random() * 50) + 20,
-    newCustomers: Math.floor(Math.random() * 20) + 5,
-    target: 150000
-  }));
+  // Sample data for analytics
+  const salesData = [
+    { month: 'Jan', revenue: 125000, orders: 45, newCustomers: 12, target: 120000 },
+    { month: 'Feb', revenue: 142000, orders: 52, newCustomers: 18, target: 140000 },
+    { month: 'Mar', revenue: 138000, orders: 48, newCustomers: 15, target: 135000 },
+    { month: 'Apr', revenue: 165000, orders: 61, newCustomers: 22, target: 160000 },
+    { month: 'May', revenue: 158000, orders: 55, newCustomers: 19, target: 155000 },
+    { month: 'Jun', revenue: 172000, orders: 63, newCustomers: 25, target: 170000 },
+    { month: 'Jul', revenue: 145000, orders: 49, newCustomers: 16, target: 150000 },
+    { month: 'Aug', revenue: 189000, orders: 68, newCustomers: 28, target: 180000 },
+    { month: 'Sep', revenue: 176000, orders: 59, newCustomers: 21, target: 175000 },
+    { month: 'Oct', revenue: 195000, orders: 72, newCustomers: 32, target: 190000 },
+    { month: 'Nov', revenue: 182000, orders: 64, newCustomers: 24, target: 185000 },
+    { month: 'Dec', revenue: 205000, orders: 78, newCustomers: 35, target: 200000 }
+  ];
 
   const productPerformance = [
     { product: 'Enterprise Software', revenue: 450000, units: 125, growth: 15.2 },
@@ -81,11 +43,13 @@ const SalesAnalytics: React.FC = () => {
     { product: 'Training Services', revenue: 120000, units: 67, growth: 12.8 }
   ];
 
-  const salesRepData = [...new Set(orders.map(o => o.salesRep))].slice(0, 5).map(rep => ({
-    name: rep,
-    revenue: orders.filter(o => o.salesRep === rep).reduce((sum, o) => sum + o.totalAmount, 0),
-    orders: orders.filter(o => o.salesRep === rep).length
-  }));
+  const salesRepPerformance = [
+    { name: 'Sarah Johnson', revenue: 285000, orders: 45, conversion: 68, target: 280000 },
+    { name: 'Mike Wilson', revenue: 245000, orders: 38, conversion: 62, target: 250000 },
+    { name: 'Lisa Chen', revenue: 195000, orders: 32, conversion: 58, target: 200000 },
+    { name: 'David Brown', revenue: 175000, orders: 28, conversion: 55, target: 180000 },
+    { name: 'Emma Davis', revenue: 165000, orders: 25, conversion: 52, target: 170000 }
+  ];
 
   const regionData = [
     { region: 'North America', revenue: 580000, share: 35, color: '#8884d8' },
@@ -103,17 +67,13 @@ const SalesAnalytics: React.FC = () => {
   ];
 
   const kpiMetrics = [
-    { title: 'Total Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}K`, change: '+18.5%', trend: 'up', icon: DollarSign },
-    { title: 'Total Orders', value: totalOrders.toString(), change: '+12.3%', trend: 'up', icon: Target },
-    { title: 'New Customers', value: activeCustomers.toString(), change: '+25.7%', trend: 'up', icon: Users },
-    { title: 'Avg Order Value', value: `$${avgOrderValue.toFixed(0)}`, change: '+5.2%', trend: 'up', icon: TrendingUp },
+    { title: 'Total Revenue', value: '$2.1M', change: '+18.5%', trend: 'up', icon: DollarSign },
+    { title: 'Total Orders', value: '672', change: '+12.3%', trend: 'up', icon: Target },
+    { title: 'New Customers', value: '287', change: '+25.7%', trend: 'up', icon: Users },
+    { title: 'Avg Order Value', value: '$3,125', change: '+5.2%', trend: 'up', icon: TrendingUp },
     { title: 'Conversion Rate', value: '14.8%', change: '+2.1%', trend: 'up', icon: TrendingUp },
     { title: 'Customer Retention', value: '89.2%', change: '-1.3%', trend: 'down', icon: TrendingDown }
   ];
-
-  const handleExport = () => {
-    toast({ title: 'Exporting', description: 'Analytics data export started...' });
-  };
 
   if (isLoading) {
     return (
@@ -130,10 +90,6 @@ const SalesAnalytics: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Sales Analytics</h1>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadData}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -149,7 +105,7 @@ const SalesAnalytics: React.FC = () => {
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -339,51 +295,100 @@ const SalesAnalytics: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {salesRepData.map((rep, index) => (
+                {salesRepPerformance.map((rep, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="font-medium">{rep.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        ${rep.revenue.toLocaleString()} revenue • {rep.orders} orders
+                        ${rep.revenue.toLocaleString()} revenue • {rep.orders} orders • {rep.conversion}% conversion
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${(rep.revenue / rep.target) * 100}%` }}
+                        ></div>
                       </div>
                     </div>
+                    <Badge variant={rep.revenue >= rep.target ? 'default' : 'secondary'}>
+                      {Math.round((rep.revenue / rep.target) * 100)}% of target
+                    </Badge>
                   </div>
                 ))}
-                {salesRepData.length === 0 && (
-                  <div className="text-center p-4 text-muted-foreground">No sales rep data available</div>
-                )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Rep Revenue Comparison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={salesRepPerformance}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, '']} />
+                  <Bar dataKey="revenue" fill="#8884d8" name="Actual" />
+                  <Bar dataKey="target" fill="#82ca9d" name="Target" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="regions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Regional Revenue Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={regionData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ region, share }) => `${region} ${share}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="revenue"
-                  >
-                    {regionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Region</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {regionData.map((region, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-4 h-4 rounded mr-3" 
+                          style={{ backgroundColor: region.color }}
+                        ></div>
+                        <span>{region.region}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">${region.revenue.toLocaleString()}</div>
+                        <div className="text-sm text-muted-foreground">{region.share}%</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Regional Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={regionData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="revenue"
+                      label={({ region, share }) => `${share}%`}
+                    >
+                      {regionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="customers" className="space-y-6">
@@ -392,17 +397,38 @@ const SalesAnalytics: React.FC = () => {
               <CardTitle>Customer Segments</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-4">
                 {customerSegments.map((segment, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="font-medium">{segment.segment}</div>
-                    <div className="text-2xl font-bold mt-2">${segment.revenue.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {segment.customers} customers • ${segment.avgOrder.toLocaleString()} avg order
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium">{segment.segment}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {segment.customers} customers • Avg order: ${segment.avgOrder.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">${segment.revenue.toLocaleString()}</div>
+                      <div className="text-sm text-muted-foreground">Total revenue</div>
                     </div>
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Segment Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={customerSegments}>
+                  <XAxis dataKey="segment" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
+                  <Bar dataKey="revenue" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>

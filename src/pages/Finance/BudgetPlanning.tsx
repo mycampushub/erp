@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { 
   ArrowLeft, 
   Plus, 
@@ -18,8 +17,7 @@ import {
   Eye,
   Edit,
   Copy,
-  Trash2,
-  Save
+  Download
 } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
@@ -53,90 +51,13 @@ interface BudgetVersion {
   status: 'Current' | 'Previous' | 'Archived';
 }
 
-const seedBudgets = (): Budget[] => [
-  {
-    id: 'bg-001',
-    name: 'IT Operations Budget',
-    year: 2025,
-    department: 'Information Technology',
-    category: 'Operating Expenses',
-    budgetAmount: 500000,
-    actualSpent: 125000,
-    committed: 150000,
-    available: 225000,
-    variance: -25000,
-    variancePercent: -5.0,
-    status: 'Active'
-  },
-  {
-    id: 'bg-002',
-    name: 'Marketing Campaign Budget',
-    year: 2025,
-    department: 'Marketing',
-    category: 'Marketing Expenses',
-    budgetAmount: 300000,
-    actualSpent: 85000,
-    committed: 75000,
-    available: 140000,
-    variance: 15000,
-    variancePercent: 5.0,
-    status: 'Active'
-  },
-  {
-    id: 'bg-003',
-    name: 'HR Training Budget',
-    year: 2025,
-    department: 'Human Resources',
-    category: 'Training & Development',
-    budgetAmount: 150000,
-    actualSpent: 45000,
-    committed: 25000,
-    available: 80000,
-    variance: 5000,
-    variancePercent: 3.3,
-    status: 'Active'
-  }
-];
-
-const seedBudgetVersions = (): BudgetVersion[] => [
-  {
-    id: 'bv-001',
-    budgetId: 'bg-001',
-    version: '2025.1',
-    description: 'Initial 2025 Budget',
-    createdDate: '2024-12-15',
-    createdBy: 'John Smith',
-    status: 'Current'
-  },
-  {
-    id: 'bv-002',
-    budgetId: 'bg-001',
-    version: '2024.3',
-    description: 'Final 2024 Budget Revision',
-    createdDate: '2024-09-15',
-    createdBy: 'John Smith',
-    status: 'Previous'
-  }
-];
-
 const BudgetPlanning: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   const [activeTab, setActiveTab] = useState('budgets');
-  const [budgets, setBudgets] = useState<Budget[]>(() => seedBudgets());
-  const [budgetVersions, setBudgetVersions] = useState<BudgetVersion[]>(() => seedBudgetVersions());
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    year: '2025',
-    department: '',
-    category: '',
-    budgetAmount: '',
-    status: 'Draft'
-  });
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgetVersions, setBudgetVersions] = useState<BudgetVersion[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -145,160 +66,79 @@ const BudgetPlanning: React.FC = () => {
     }
   }, [isEnabled, speak]);
 
+  useEffect(() => {
+    loadBudgetData();
+  }, []);
+
   const loadBudgetData = () => {
-    setBudgets(seedBudgets());
-    setBudgetVersions(seedBudgetVersions());
-  };
-
-  const handleCreateBudget = () => {
-    if (!formData.name || !formData.department || !formData.category || !formData.budgetAmount) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const newBudget: Budget = {
-      id: `bg-${String(budgets.length + 1).padStart(3, '0')}`,
-      name: formData.name,
-      year: parseInt(formData.year),
-      department: formData.department,
-      category: formData.category,
-      budgetAmount: parseFloat(formData.budgetAmount),
-      actualSpent: 0,
-      committed: 0,
-      available: parseFloat(formData.budgetAmount),
-      variance: 0,
-      variancePercent: 0,
-      status: formData.status as 'Draft' | 'Approved' | 'Active' | 'Closed'
-    };
-
-    const updatedBudgets = [...budgets, newBudget];
-    setBudgets(updatedBudgets);
-    setIsCreateDialogOpen(false);
-    setFormData({ name: '', year: '2025', department: '', category: '', budgetAmount: '', status: 'Draft' });
-    
-    toast({
-      title: 'Budget Created',
-      description: `Budget "${newBudget.name}" has been created successfully`,
-    });
-  };
-
-  const handleEditBudget = (budget: Budget) => {
-    setSelectedBudget(budget);
-    setFormData({
-      name: budget.name,
-      year: budget.year.toString(),
-      department: budget.department,
-      category: budget.category,
-      budgetAmount: budget.budgetAmount.toString(),
-      status: budget.status
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleUpdateBudget = () => {
-    if (!selectedBudget) return;
-
-    const updatedBudgets = budgets.map(b => {
-      if (b.id === selectedBudget.id) {
-        const newBudgetAmount = parseFloat(formData.budgetAmount);
-        const variance = newBudgetAmount - b.budgetAmount;
-        return {
-          ...b,
-          name: formData.name,
-          year: parseInt(formData.year),
-          department: formData.department,
-          category: formData.category,
-          budgetAmount: newBudgetAmount,
-          available: b.available + variance,
-          variance: variance,
-          variancePercent: (variance / b.budgetAmount) * 100,
-          status: formData.status as 'Draft' | 'Approved' | 'Active' | 'Closed'
-        };
+    const sampleBudgets: Budget[] = [
+      {
+        id: 'bg-001',
+        name: 'IT Operations Budget',
+        year: 2025,
+        department: 'Information Technology',
+        category: 'Operating Expenses',
+        budgetAmount: 500000,
+        actualSpent: 125000,
+        committed: 150000,
+        available: 225000,
+        variance: -25000,
+        variancePercent: -5.0,
+        status: 'Active'
+      },
+      {
+        id: 'bg-002',
+        name: 'Marketing Campaign Budget',
+        year: 2025,
+        department: 'Marketing',
+        category: 'Marketing Expenses',
+        budgetAmount: 300000,
+        actualSpent: 85000,
+        committed: 75000,
+        available: 140000,
+        variance: 15000,
+        variancePercent: 5.0,
+        status: 'Active'
+      },
+      {
+        id: 'bg-003',
+        name: 'HR Training Budget',
+        year: 2025,
+        department: 'Human Resources',
+        category: 'Training & Development',
+        budgetAmount: 150000,
+        actualSpent: 45000,
+        committed: 25000,
+        available: 80000,
+        variance: 5000,
+        variancePercent: 3.3,
+        status: 'Active'
       }
-      return b;
-    });
+    ];
 
-    setBudgets(updatedBudgets);
-    setIsEditDialogOpen(false);
-    setSelectedBudget(null);
-    
-    toast({
-      title: 'Budget Updated',
-      description: `Budget "${formData.name}" has been updated successfully`,
-    });
-  };
+    const sampleVersions: BudgetVersion[] = [
+      {
+        id: 'bv-001',
+        budgetId: 'bg-001',
+        version: '2025.1',
+        description: 'Initial 2025 Budget',
+        createdDate: '2024-12-15',
+        createdBy: 'John Smith',
+        status: 'Current'
+      },
+      {
+        id: 'bv-002',
+        budgetId: 'bg-001',
+        version: '2024.3',
+        description: 'Final 2024 Budget Revision',
+        createdDate: '2024-09-15',
+        createdBy: 'John Smith',
+        status: 'Previous'
+      }
+    ];
 
-  const handleDeleteBudget = (budget: Budget) => {
-    const updatedBudgets = budgets.filter(b => b.id !== budget.id);
-    setBudgets(updatedBudgets);
-    toast({
-      title: 'Budget Deleted',
-      description: `Budget "${budget.name}" has been deleted`,
-    });
-  };
-
-  const handleCopyBudget = (budget: Budget) => {
-    const copiedBudget: Budget = {
-      ...budget,
-      id: `bg-${String(budgets.length + 1).padStart(3, '0')}`,
-      name: `${budget.name} (Copy)`,
-      status: 'Draft'
-    };
-    const updatedBudgets = [...budgets, copiedBudget];
-    setBudgets(updatedBudgets);
-    toast({
-      title: 'Budget Copied',
-      description: `Budget has been copied as "${copiedBudget.name}"`,
-    });
-  };
-
-  const handleUseTemplate = (templateName: string) => {
-    const templateData = {
-      name: templateName,
-      year: '2025',
-      department: '',
-      category: '',
-      budgetAmount: '',
-      status: 'Draft'
-    };
-
-    switch (templateName) {
-      case 'Annual Operating Budget':
-        templateData.category = 'Operating Expenses';
-        templateData.budgetAmount = '100000';
-        break;
-      case 'Quarterly Review Budget':
-        templateData.category = 'Quarterly Expenses';
-        templateData.budgetAmount = '25000';
-        break;
-      case 'Department Budget Template':
-        templateData.category = 'Department Expenses';
-        templateData.budgetAmount = '50000';
-        break;
-      case 'Project Budget Template':
-        templateData.category = 'Project Expenses';
-        templateData.budgetAmount = '75000';
-        break;
-      case 'Capital Expenditure Budget':
-        templateData.category = 'Capital Expenses';
-        templateData.budgetAmount = '200000';
-        break;
-      case 'Emergency Budget Template':
-        templateData.category = 'Emergency Expenses';
-        templateData.budgetAmount = '10000';
-        break;
-    }
-
-    setFormData(templateData);
-    setIsCreateDialogOpen(true);
-    toast({
-      title: 'Template Selected',
-      description: `Template "${templateName}" loaded. Please complete the details.`,
-    });
+    setBudgets(sampleBudgets);
+    setBudgetVersions(sampleVersions);
   };
 
   const getStatusColor = (status: string) => {
@@ -370,8 +210,6 @@ const BudgetPlanning: React.FC = () => {
       label: 'View',
       icon: <Eye className="h-4 w-4" />,
       onClick: (row: Budget) => {
-        setSelectedBudget(row);
-        setActiveTab('analysis');
         toast({
           title: 'View Budget',
           description: `Opening details for ${row.name}`,
@@ -382,19 +220,23 @@ const BudgetPlanning: React.FC = () => {
     {
       label: 'Edit',
       icon: <Edit className="h-4 w-4" />,
-      onClick: (row: Budget) => handleEditBudget(row),
+      onClick: (row: Budget) => {
+        toast({
+          title: 'Edit Budget',
+          description: `Editing ${row.name}`,
+        });
+      },
       variant: 'ghost'
     },
     {
       label: 'Copy',
       icon: <Copy className="h-4 w-4" />,
-      onClick: (row: Budget) => handleCopyBudget(row),
-      variant: 'ghost'
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: Budget) => handleDeleteBudget(row),
+      onClick: (row: Budget) => {
+        toast({
+          title: 'Copy Budget',
+          description: `Creating copy of ${row.name}`,
+        });
+      },
       variant: 'ghost'
     }
   ];
@@ -493,103 +335,10 @@ const BudgetPlanning: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Budget Overview
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setFormData({ name: '', year: '2025', department: '', category: '', budgetAmount: '', status: 'Draft' })}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Budget
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create New Budget</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Budget Name *</Label>
-                        <Input 
-                          id="name" 
-                          value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          placeholder="Enter budget name" 
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="year">Year *</Label>
-                          <Select value={formData.year} onValueChange={(value) => setFormData({...formData, year: value})}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="2025">2025</SelectItem>
-                              <SelectItem value="2026">2026</SelectItem>
-                              <SelectItem value="2027">2027</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="status">Status</Label>
-                          <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Draft">Draft</SelectItem>
-                              <SelectItem value="Approved">Approved</SelectItem>
-                              <SelectItem value="Active">Active</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="department">Department *</Label>
-                        <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Information Technology">Information Technology</SelectItem>
-                            <SelectItem value="Marketing">Marketing</SelectItem>
-                            <SelectItem value="Human Resources">Human Resources</SelectItem>
-                            <SelectItem value="Finance">Finance</SelectItem>
-                            <SelectItem value="Operations">Operations</SelectItem>
-                            <SelectItem value="Sales">Sales</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="category">Category *</Label>
-                        <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Operating Expenses">Operating Expenses</SelectItem>
-                            <SelectItem value="Marketing Expenses">Marketing Expenses</SelectItem>
-                            <SelectItem value="Training & Development">Training & Development</SelectItem>
-                            <SelectItem value="Capital Expenses">Capital Expenses</SelectItem>
-                            <SelectItem value="Project Expenses">Project Expenses</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="budgetAmount">Budget Amount *</Label>
-                        <Input 
-                          id="budgetAmount" 
-                          type="number"
-                          value={formData.budgetAmount}
-                          onChange={(e) => setFormData({...formData, budgetAmount: e.target.value})}
-                          placeholder="Enter budget amount" 
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateBudget}><Save className="h-4 w-4 mr-2" />Create Budget</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button onClick={() => toast({ title: 'New Budget', description: 'Opening budget creation form' })}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Budget
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -655,29 +404,18 @@ const BudgetPlanning: React.FC = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Budget Templates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[{
-                    name: 'Annual Operating Budget',
-                    desc: 'Pre-configured template for annual operating budget'
-                  }, {
-                    name: 'Quarterly Review Budget', 
-                    desc: 'Pre-configured template for quarterly budget review'
-                  }, {
-                    name: 'Department Budget Template',
-                    desc: 'Pre-configured template for department budgets'
-                  }, {
-                    name: 'Project Budget Template',
-                    desc: 'Pre-configured template for project budgets'
-                  }, {
-                    name: 'Capital Expenditure Budget',
-                    desc: 'Pre-configured template for capital expenditures'
-                  }, {
-                    name: 'Emergency Budget Template',
-                    desc: 'Pre-configured template for emergency funds'
-                  }].map((template, index) => (
-                    <Card key={index} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleUseTemplate(template.name)}>
-                      <h4 className="font-semibold">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground">{template.desc}</p>
-                      <Button size="sm" className="mt-2" variant="outline" onClick={(e) => { e.stopPropagation(); handleUseTemplate(template.name); }}>Use Template</Button>
+                  {[
+                    'Annual Operating Budget',
+                    'Quarterly Review Budget',
+                    'Department Budget Template',
+                    'Project Budget Template',
+                    'Capital Expenditure Budget',
+                    'Emergency Budget Template'
+                  ].map((template, index) => (
+                    <Card key={index} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold">{template}</h4>
+                      <p className="text-sm text-muted-foreground">Pre-configured template for {template.toLowerCase()}</p>
+                      <Button size="sm" className="mt-2" variant="outline">Use Template</Button>
                     </Card>
                   ))}
                 </div>
@@ -786,99 +524,6 @@ const BudgetPlanning: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Budget</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="editName">Budget Name *</Label>
-              <Input 
-                id="editName" 
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter budget name" 
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="editYear">Year *</Label>
-                <Select value={formData.year} onValueChange={(value) => setFormData({...formData, year: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2026">2026</SelectItem>
-                    <SelectItem value="2027">2027</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="editStatus">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Draft">Draft</SelectItem>
-                    <SelectItem value="Approved">Approved</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="editDepartment">Department *</Label>
-              <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Information Technology">Information Technology</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Human Resources">Human Resources</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="Operations">Operations</SelectItem>
-                  <SelectItem value="Sales">Sales</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="editCategory">Category *</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Operating Expenses">Operating Expenses</SelectItem>
-                  <SelectItem value="Marketing Expenses">Marketing Expenses</SelectItem>
-                  <SelectItem value="Training & Development">Training & Development</SelectItem>
-                  <SelectItem value="Capital Expenses">Capital Expenses</SelectItem>
-                  <SelectItem value="Project Expenses">Project Expenses</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="editBudgetAmount">Budget Amount *</Label>
-              <Input 
-                id="editBudgetAmount" 
-                type="number"
-                value={formData.budgetAmount}
-                onChange={(e) => setFormData({...formData, budgetAmount: e.target.value})}
-                placeholder="Enter budget amount" 
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setSelectedBudget(null); }}>Cancel</Button>
-              <Button onClick={handleUpdateBudget}><Save className="h-4 w-4 mr-2" />Update Budget</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

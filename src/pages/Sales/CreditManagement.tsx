@@ -1,262 +1,80 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Button } from '../../components/ui/button';
-import { Search, AlertCircle, Check, Clock, Ban, RefreshCw, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, AlertCircle, Check, Clock, Ban, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import EnhancedDataTable, { EnhancedColumn, TableAction } from '../../components/data/EnhancedDataTable';
-import { useToast } from '../../hooks/use-toast';
-import { listEntities, upsertEntity, removeEntity, generateId } from '../../lib/localCrud';
-import { SALES_STORAGE_KEYS, CreditCheck, CustomerCredit, initializeSalesData } from '../../lib/salesData';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 const CreditManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('checks');
-  const [creditChecks, setCreditChecks] = useState<CreditCheck[]>([]);
-  const [customerCredit, setCustomerCredit] = useState<CustomerCredit[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'check' | 'customer'>('check');
-  const [selectedItem, setSelectedItem] = useState<CreditCheck | CustomerCredit | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const { toast } = useToast();
 
-  useEffect(() => {
-    initializeSalesData();
-    loadData();
-  }, []);
+  const creditChecks = [
+    { id: 'CC001', customer: 'Acme Corp', orderRef: 'SO78954', amount: '$28,500', checkDate: '2025-05-20 14:30', status: 'Approved', limit: '$100,000', exposure: '$72,500' },
+    { id: 'CC002', customer: 'TechSolutions Inc', orderRef: 'SO78965', amount: '$45,200', checkDate: '2025-05-20 13:15', status: 'Pending', limit: '$50,000', exposure: '$48,700' },
+    { id: 'CC003', customer: 'Global Retail', orderRef: 'SO79001', amount: '$120,000', checkDate: '2025-05-20 11:20', status: 'Blocked', limit: '$100,000', exposure: '$110,000' },
+    { id: 'CC004', customer: 'Manufacturing Partners', orderRef: 'SO78990', amount: '$12,750', checkDate: '2025-05-20 10:05', status: 'Approved', limit: '$75,000', exposure: '$42,300' },
+    { id: 'CC005', customer: 'Logistic Solutions', orderRef: 'SO78975', amount: '$36,200', checkDate: '2025-05-19 16:40', status: 'Approved', limit: '$120,000', exposure: '$86,500' },
+  ];
 
-  const loadData = () => {
-    const storedChecks = listEntities<CreditCheck>(SALES_STORAGE_KEYS.CREDIT_CHECKS);
-    const storedCredit = listEntities<CustomerCredit>(SALES_STORAGE_KEYS.CUSTOMER_CREDIT);
-    setCreditChecks(storedChecks);
-    setCustomerCredit(storedCredit);
-    setIsLoading(false);
-  };
-
-  const filteredChecks = creditChecks.filter(check => 
-    check.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    check.checkNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredCredit = customerCredit.filter(c => 
-    c.customer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleCreateCheck = () => {
-    setSelectedItem(null);
-    setIsEditing(false);
-    setDialogType('check');
-    setIsDialogOpen(true);
-  };
-
-  const handleCreateCustomerCredit = () => {
-    setSelectedItem(null);
-    setIsEditing(false);
-    setDialogType('customer');
-    setIsDialogOpen(true);
-  };
-
-  const handleEditCheck = (check: CreditCheck) => {
-    setSelectedItem(check);
-    setIsEditing(true);
-    setDialogType('check');
-    setIsDialogOpen(true);
-  };
-
-  const handleEditCustomerCredit = (credit: CustomerCredit) => {
-    setSelectedItem(credit);
-    setIsEditing(true);
-    setDialogType('customer');
-    setIsDialogOpen(true);
-  };
-
-  const handleDeleteCheck = (check: CreditCheck) => {
-    if (window.confirm(`Delete credit check ${check.checkNumber}?`)) {
-      removeEntity(SALES_STORAGE_KEYS.CREDIT_CHECKS, check.id);
-      loadData();
-      toast({ title: 'Deleted', description: 'Credit check has been deleted.' });
-    }
-  };
-
-  const handleDeleteCustomerCredit = (credit: CustomerCredit) => {
-    if (window.confirm(`Delete credit record for ${credit.customer}?`)) {
-      removeEntity(SALES_STORAGE_KEYS.CUSTOMER_CREDIT, credit.id);
-      loadData();
-      toast({ title: 'Deleted', description: 'Customer credit record has been deleted.' });
-    }
-  };
-
-  const handleSaveCheck = (data: Partial<CreditCheck>) => {
-    if (isEditing && selectedItem) {
-      upsertEntity(SALES_STORAGE_KEYS.CREDIT_CHECKS, { ...selectedItem, ...data } as CreditCheck);
-      toast({ title: 'Updated', description: 'Credit check has been updated.' });
-    } else {
-      const newCheck: CreditCheck = {
-        id: generateId('cc'),
-        checkNumber: `CC-${String(creditChecks.length + 1).padStart(4, '0')}`,
-        customer: data.customer || '',
-        customerId: data.customerId || '',
-        orderRef: data.orderRef || '',
-        amount: data.amount || 0,
-        checkDate: data.checkDate || new Date().toISOString().split('T')[0],
-        status: 'Pending',
-        creditLimit: data.creditLimit || 100000,
-        currentExposure: data.currentExposure || 0
-      };
-      upsertEntity(SALES_STORAGE_KEYS.CREDIT_CHECKS, newCheck);
-      toast({ title: 'Created', description: 'Credit check has been created.' });
-    }
-    loadData();
-    setIsDialogOpen(false);
-  };
-
-  const handleSaveCustomerCredit = (data: Partial<CustomerCredit>) => {
-    if (isEditing && selectedItem) {
-      upsertEntity(SALES_STORAGE_KEYS.CUSTOMER_CREDIT, { ...selectedItem, ...data } as CustomerCredit);
-      toast({ title: 'Updated', description: 'Customer credit has been updated.' });
-    } else {
-      const newCredit: CustomerCredit = {
-        id: generateId('crc'),
-        customer: data.customer || '',
-        customerId: data.customerId || '',
-        creditLimit: data.creditLimit || 100000,
-        currentExposure: data.currentExposure || 0,
-        riskCategory: data.riskCategory || 'Medium',
-        lastReview: data.lastReview || new Date().toISOString().split('T')[0],
-        nextReview: data.nextReview || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        paymentHistory: data.paymentHistory || 'Good'
-      };
-      upsertEntity(SALES_STORAGE_KEYS.CUSTOMER_CREDIT, newCredit);
-      toast({ title: 'Created', description: 'Customer credit has been created.' });
-    }
-    loadData();
-    setIsDialogOpen(false);
-  };
+  const customers = [
+    { id: 'C001', name: 'Acme Corp', creditLimit: '$100,000', currentExposure: '$72,500', riskCategory: 'Medium', lastReview: '2025-03-15', nextReview: '2025-09-15' },
+    { id: 'C002', name: 'TechSolutions Inc', creditLimit: '$50,000', currentExposure: '$48,700', riskCategory: 'High', lastReview: '2025-04-10', nextReview: '2025-07-10' },
+    { id: 'C003', name: 'Global Retail', creditLimit: '$100,000', currentExposure: '$110,000', riskCategory: 'Critical', lastReview: '2025-05-05', nextReview: '2025-06-05' },
+    { id: 'C004', name: 'Manufacturing Partners', creditLimit: '$75,000', currentExposure: '$42,300', riskCategory: 'Low', lastReview: '2025-02-20', nextReview: '2025-08-20' },
+    { id: 'C005', name: 'Logistic Solutions', creditLimit: '$120,000', currentExposure: '$86,500', riskCategory: 'Medium', lastReview: '2025-03-01', nextReview: '2025-09-01' },
+  ];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Approved': return <Check className="h-4 w-4 text-green-500" />;
-      case 'Pending': return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'Blocked': return <Ban className="h-4 w-4 text-red-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-500" />;
+      case 'Approved':
+        return <Check className="h-4 w-4 text-green-500" />;
+      case 'Pending':
+        return <Clock className="h-4 w-4 text-amber-500" />;
+      case 'Blocked':
+        return <Ban className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
     }
   };
 
   const getRiskBadge = (risk: string) => {
-    const colors: Record<string, string> = {
-      'Low': 'bg-green-100 text-green-800',
-      'Medium': 'bg-amber-100 text-amber-800',
-      'High': 'bg-orange-100 text-orange-800',
-      'Critical': 'bg-red-100 text-red-800'
-    };
-    return <Badge className={colors[risk] || 'bg-gray-100'}>{risk}</Badge>;
+    switch (risk) {
+      case 'Low':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Low</Badge>;
+      case 'Medium':
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Medium</Badge>;
+      case 'High':
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">High</Badge>;
+      case 'Critical':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Critical</Badge>;
+      default:
+        return null;
+    }
   };
 
-  const calculateUsagePercentage = (exposure: number, limit: number) => {
-    if (limit === 0) return 0;
-    return Math.min(Math.round((exposure / limit) * 100), 100);
+  const calculateUsagePercentage = (exposure: string, limit: string) => {
+    const exposureValue = parseFloat(exposure.replace(/[$,]/g, ''));
+    const limitValue = parseFloat(limit.replace(/[$,]/g, ''));
+    return Math.min(Math.round((exposureValue / limitValue) * 100), 100);
   };
-
-  const checkColumns: EnhancedColumn[] = [
-    { key: 'checkNumber', header: 'Check ID', sortable: true },
-    { key: 'customer', header: 'Customer', sortable: true, searchable: true },
-    { key: 'orderRef', header: 'Order Ref', sortable: true },
-    { key: 'amount', header: 'Amount', sortable: true, render: (v: number) => `$${v.toLocaleString()}` },
-    { key: 'checkDate', header: 'Check Date', sortable: true },
-    { 
-      key: 'status', 
-      header: 'Status',
-      render: (value: string) => (
-        <div className="flex items-center">
-          {getStatusIcon(value)}
-          <span className="ml-2">{value}</span>
-        </div>
-      )
-    }
-  ];
-
-  const checkActions: TableAction[] = [
-    {
-      label: 'Edit',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: (row: CreditCheck) => handleEditCheck(row),
-      variant: 'ghost'
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: CreditCheck) => handleDeleteCheck(row),
-      variant: 'ghost'
-    }
-  ];
-
-  const creditColumns: EnhancedColumn[] = [
-    { key: 'customer', header: 'Customer', sortable: true, searchable: true },
-    { key: 'creditLimit', header: 'Credit Limit', sortable: true, render: (v: number) => `$${v.toLocaleString()}` },
-    { 
-      key: 'currentExposure', 
-      header: 'Credit Usage',
-      render: (value: number, row: CustomerCredit) => {
-        const usage = calculateUsagePercentage(value, row.creditLimit);
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span>${value.toLocaleString()}</span>
-              <span>{usage}%</span>
-            </div>
-            <Progress 
-              value={usage} 
-              max={100}
-              className={`h-2 ${usage >= 90 ? 'bg-red-100' : usage >= 75 ? 'bg-amber-100' : 'bg-gray-100'}`}
-            />
-          </div>
-        );
-      }
-    },
-    { 
-      key: 'riskCategory', 
-      header: 'Risk',
-      render: (value: string) => getRiskBadge(value)
-    },
-    { key: 'lastReview', header: 'Last Review', sortable: true },
-    { key: 'nextReview', header: 'Next Review', sortable: true }
-  ];
-
-  const creditActions: TableAction[] = [
-    {
-      label: 'Edit',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: (row: CustomerCredit) => handleEditCustomerCredit(row),
-      variant: 'ghost'
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: (row: CustomerCredit) => handleDeleteCustomerCredit(row),
-      variant: 'ghost'
-    }
-  ];
-
-  const creditMetrics = [
-    { title: 'Credit Checks', value: creditChecks.length },
-    { title: 'Approved', value: creditChecks.filter(c => c.status === 'Approved').length },
-    { title: 'Pending', value: creditChecks.filter(c => c.status === 'Pending').length },
-    { title: 'High Risk', value: customerCredit.filter(c => c.riskCategory === 'High' || c.riskCategory === 'Critical').length }
-  ];
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Credit Management</h1>
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={loadData}>
+          <Button variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -267,52 +85,58 @@ const CreditManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {creditMetrics.map((metric, index) => (
-          <Card key={index}>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{metric.value}</div>
-              <div className="text-sm text-muted-foreground">{metric.title}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Tabs defaultValue="checks" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="checks">Credit Checks ({creditChecks.length})</TabsTrigger>
-          <TabsTrigger value="customers">Customer Credit ({customerCredit.length})</TabsTrigger>
+          <TabsTrigger value="checks">Credit Checks</TabsTrigger>
+          <TabsTrigger value="customers">Customer Credit</TabsTrigger>
           <TabsTrigger value="settings">Credit Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="checks" className="space-y-4 pt-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="relative w-72">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search credit checks..." className="pl-8" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <Input placeholder="Search credit checks..." className="pl-8" />
                 </div>
-                <Button onClick={handleCreateCheck}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Credit Check
-                </Button>
               </div>
 
-              {isLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : (
-                <EnhancedDataTable 
-                  columns={checkColumns}
-                  data={filteredChecks}
-                  actions={checkActions}
-                  exportable={true}
-                  refreshable={true}
-                  onRefresh={loadData}
-                />
-              )}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Check ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Order Ref</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Check Date/Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creditChecks.map(check => (
+                      <TableRow key={check.id}>
+                        <TableCell>{check.id}</TableCell>
+                        <TableCell>{check.customer}</TableCell>
+                        <TableCell>{check.orderRef}</TableCell>
+                        <TableCell>{check.amount}</TableCell>
+                        <TableCell>{check.checkDate}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {getStatusIcon(check.status)}
+                            <span className="ml-2">{check.status}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">Details</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -320,31 +144,63 @@ const CreditManagement: React.FC = () => {
         <TabsContent value="customers" className="space-y-4 pt-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="relative w-72">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search customers..." className="pl-8" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <Input placeholder="Search customers..." className="pl-8" />
                 </div>
-                <Button onClick={handleCreateCustomerCredit}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Set Customer Credit
-                </Button>
               </div>
 
-              {isLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : (
-                <EnhancedDataTable 
-                  columns={creditColumns}
-                  data={filteredCredit}
-                  actions={creditActions}
-                  exportable={true}
-                  refreshable={true}
-                  onRefresh={loadData}
-                />
-              )}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Credit Limit</TableHead>
+                      <TableHead>Credit Usage</TableHead>
+                      <TableHead>Risk Category</TableHead>
+                      <TableHead>Last Review</TableHead>
+                      <TableHead>Next Review</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customers.map(customer => {
+                      const usagePercentage = calculateUsagePercentage(customer.currentExposure, customer.creditLimit);
+                      
+                      return (
+                        <TableRow key={customer.id}>
+                          <TableCell>{customer.name}</TableCell>
+                          <TableCell>{customer.creditLimit}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span>{customer.currentExposure}</span>
+                                <span>{usagePercentage}%</span>
+                              </div>
+                              <Progress 
+                                value={usagePercentage} 
+                                max={100}
+                                className={`h-2 ${
+                                  usagePercentage >= 90 ? 'bg-red-100' :
+                                  usagePercentage >= 75 ? 'bg-amber-100' :
+                                  'bg-gray-100'
+                                }`}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>{getRiskBadge(customer.riskCategory)}</TableCell>
+                          <TableCell>{customer.lastReview}</TableCell>
+                          <TableCell>{customer.nextReview}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm">Manage</Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -376,124 +232,6 @@ const CreditManagement: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogType === 'check' 
-                ? (isEditing ? 'Edit Credit Check' : 'New Credit Check')
-                : (isEditing ? 'Edit Customer Credit' : 'Set Customer Credit')}
-            </DialogTitle>
-          </DialogHeader>
-          {dialogType === 'check' ? (
-            <CreditCheckForm 
-              check={selectedItem as CreditCheck | null}
-              onSave={handleSaveCheck}
-              onCancel={() => setIsDialogOpen(false)}
-            />
-          ) : (
-            <CustomerCreditForm 
-              credit={selectedItem as CustomerCredit | null}
-              onSave={handleSaveCustomerCredit}
-              onCancel={() => setIsDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-const CreditCheckForm: React.FC<{
-  check: CreditCheck | null;
-  onSave: (data: Partial<CreditCheck>) => void;
-  onCancel: () => void;
-}> = ({ check, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    customer: check?.customer || '',
-    customerId: check?.customerId || '',
-    orderRef: check?.orderRef || '',
-    amount: check?.amount || 0,
-    checkDate: check?.checkDate || new Date().toISOString().split('T')[0],
-    creditLimit: check?.creditLimit || 100000,
-    currentExposure: check?.currentExposure || 0
-  });
-
-  return (
-    <div className="space-y-4 py-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Customer</Label>
-          <Input value={formData.customer} onChange={(e) => setFormData(p => ({ ...p, customer: e.target.value }))} />
-        </div>
-        <div>
-          <Label>Order Reference</Label>
-          <Input value={formData.orderRef} onChange={(e) => setFormData(p => ({ ...p, orderRef: e.target.value }))} />
-        </div>
-        <div>
-          <Label>Amount</Label>
-          <Input type="number" value={formData.amount} onChange={(e) => setFormData(p => ({ ...p, amount: Number(e.target.value) }))} />
-        </div>
-        <div>
-          <Label>Check Date</Label>
-          <Input type="date" value={formData.checkDate} onChange={(e) => setFormData(p => ({ ...p, checkDate: e.target.value }))} />
-        </div>
-      </div>
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>{check ? 'Update' : 'Create'}</Button>
-      </div>
-    </div>
-  );
-};
-
-const CustomerCreditForm: React.FC<{
-  credit: CustomerCredit | null;
-  onSave: (data: Partial<CustomerCredit>) => void;
-  onCancel: () => void;
-}> = ({ credit, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    customer: credit?.customer || '',
-    customerId: credit?.customerId || '',
-    creditLimit: credit?.creditLimit || 100000,
-    currentExposure: credit?.currentExposure || 0,
-    riskCategory: credit?.riskCategory || 'Medium' as const,
-    paymentHistory: credit?.paymentHistory || 'Good' as const
-  });
-
-  return (
-    <div className="space-y-4 py-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Customer</Label>
-          <Input value={formData.customer} onChange={(e) => setFormData(p => ({ ...p, customer: e.target.value }))} />
-        </div>
-        <div>
-          <Label>Credit Limit</Label>
-          <Input type="number" value={formData.creditLimit} onChange={(e) => setFormData(p => ({ ...p, creditLimit: Number(e.target.value) }))} />
-        </div>
-        <div>
-          <Label>Current Exposure</Label>
-          <Input type="number" value={formData.currentExposure} onChange={(e) => setFormData(p => ({ ...p, currentExposure: Number(e.target.value) }))} />
-        </div>
-        <div>
-          <Label>Risk Category</Label>
-          <Select value={formData.riskCategory} onValueChange={(v: any) => setFormData(p => ({ ...p, riskCategory: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Low">Low</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Critical">Critical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>{credit ? 'Update' : 'Create'}</Button>
-      </div>
     </div>
   );
 };

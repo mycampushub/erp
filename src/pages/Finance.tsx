@@ -21,9 +21,7 @@ import {
   Calculator,
   TrendingUp,
   Building2,
-  Shield,
-  PiggyBank,
-  Briefcase
+  Shield
 } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import FinancialKPIs from './Finance/components/FinancialKPIs';
@@ -102,16 +100,6 @@ const Finance: React.FC = () => {
               <ArrowRight className="h-4 w-4" />
             </button>
             <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('cost-center-accounting')}>
-              <span>Cost Center Accounting</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('profit-center-accounting')}>
-              <span>Profit Center Accounting</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
                     onClick={() => handleNavigation('budget-planning')}>
               <span>Budget Planning</span>
               <ArrowRight className="h-4 w-4" />
@@ -139,23 +127,8 @@ const Finance: React.FC = () => {
               <ArrowRight className="h-4 w-4" />
             </button>
             <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('bank-accounts')}>
-              <span>Bank Accounts</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('treasury')}>
-              <span>Treasury</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
                     onClick={() => handleNavigation('tax-management')}>
               <span>Tax Management</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('credit-management')}>
-              <span>Credit Management</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -173,21 +146,6 @@ const Finance: React.FC = () => {
             <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
                     onClick={() => handleNavigation('financial-reporting')}>
               <span>Financial Reporting</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('financial-reports')}>
-              <span>Financial Reports</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('financial-planning')}>
-              <span>Financial Planning</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="w-full text-left py-2 px-3 hover:bg-gray-50 rounded text-sm font-medium flex items-center justify-between"
-                    onClick={() => handleNavigation('asset-accounting')}>
-              <span>Asset Accounting</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

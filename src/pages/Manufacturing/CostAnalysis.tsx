@@ -15,18 +15,10 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
 import { useToast } from '../../hooks/use-toast';
-import { generateId, listEntities, removeEntity, upsertEntity } from '../../lib/localCrud';
+import { generateId, listEntities, removeEntity, seedIfEmpty, upsertEntity } from '../../lib/localCrud';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 const STORAGE_KEY = 'manufacturingCostDrivers';
-
-interface Driver {
-  id: string;
-  costCenter: string;
-  driver: string;
-  planCost: number;
-  actualCost: number;
-}
 
 const driverSchema = z.object({
   id: z.string().min(1),
@@ -36,18 +28,12 @@ const driverSchema = z.object({
   actualCost: z.coerce.number().min(0)
 });
 
-const generateSeedData = (): Driver[] => {
-  const costCenters = ['CC-1001', 'CC-1002', 'CC-1003', 'CC-2001', 'CC-2002', 'CC-3001', 'CC-3002', 'CC-4001', 'CC-4002', 'CC-5001'];
-  const drivers = ['Machine Hours', 'Labor Hours', 'Material Consumption', 'Energy Costs', 'Maintenance Costs', 'Quality Control', 'Tooling', 'Overhead', 'Setup Time', 'Inspection'];
+type Driver = z.infer<typeof driverSchema>;
 
-  return Array.from({ length: 30 }, (_, i) => ({
-    id: generateId('drv'),
-    costCenter: costCenters[i % costCenters.length],
-    driver: drivers[i % drivers.length],
-    planCost: Math.floor(Math.random() * 150000) + 50000,
-    actualCost: Math.floor(Math.random() * 150000) + 50000,
-  }));
-};
+const seedData: Driver[] = [
+  { id: generateId('drv'), costCenter: 'CC-1001', driver: 'Machine Hours', planCost: 120000, actualCost: 110500 },
+  { id: generateId('drv'), costCenter: 'CC-1002', driver: 'Labor Hours', planCost: 90000, actualCost: 96500 },
+];
 
 const CostAnalysis: React.FC = () => {
   const navigate = useNavigate();
@@ -66,11 +52,7 @@ const CostAnalysis: React.FC = () => {
   }, [isEnabled, speak]);
 
   useEffect(() => {
-    const existing = listEntities<Driver>(STORAGE_KEY);
-    if (existing.length === 0) {
-      const seedData = generateSeedData();
-      seedData.forEach(d => upsertEntity(STORAGE_KEY, d as any));
-    }
+    seedIfEmpty<Driver>(STORAGE_KEY, seedData);
     setData(listEntities<Driver>(STORAGE_KEY));
   }, []);
 

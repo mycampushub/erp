@@ -5,76 +5,33 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Textarea } from '../../components/ui/textarea';
-import { ArrowLeft, Plus, Edit, Eye, Trash2, Users, TrendingUp, Award, AlertTriangle, Save, X } from 'lucide-react';
+import { ArrowLeft, Plus, Users, TrendingUp, Award, AlertTriangle } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
 import { useToast } from '../../hooks/use-toast';
 import VoiceTrainingComponent from '../../components/procurement/VoiceTrainingComponent';
 import SupplierCard from '../../components/procurement/SupplierCard';
-import { seedProcurementData, getProcurementData, Supplier } from '../../lib/procurementData';
 
-interface SupplierFormData {
+interface Supplier {
+  id: string;
   name: string;
   category: string;
   status: 'Active' | 'Inactive' | 'Pending' | 'Blocked';
+  rating: number;
   contactPerson: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  taxId: string;
-  paymentTerms: string;
-  currency: string;
+  totalValue: number;
+  onTimeDelivery: number;
   riskLevel: 'Low' | 'Medium' | 'High';
-  website: string;
   certifications: string[];
-  notes: string;
 }
-
-const categories = [
-  'IT Equipment', 'Office Supplies', 'Industrial Equipment', 'Medical Supplies',
-  'Raw Materials', 'Services', 'Logistics', 'Software', 'Hardware', 'Maintenance'
-];
-
-const certificationsList = ['ISO 9001', 'ISO 14001', 'ISO 27001', 'SOC 2', 'CE Mark', 'UL Listed', 'Green Certified', 'Fair Trade'];
-const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'San Francisco', 'Seattle', 'Boston', 'Atlanta', 'Denver'];
 
 const SupplierManagement: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   const [activeTab, setActiveTab] = useState('suppliers');
-  const initialData = getProcurementData();
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => initialData?.suppliers || []);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
-  const [formData, setFormData] = useState<SupplierFormData>({
-    name: '',
-    category: '',
-    status: 'Pending',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    country: 'USA',
-    taxId: '',
-    paymentTerms: 'Net 30',
-    currency: 'USD',
-    riskLevel: 'Medium',
-    website: '',
-    certifications: [],
-    notes: ''
-  });
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,162 +40,64 @@ const SupplierManagement: React.FC = () => {
     }
   }, [isEnabled, speak]);
 
-  const generateId = (prefix: string): string => {
-    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  };
-
-  const handleCreate = () => {
-    setEditingSupplier(null);
-    setFormData({
-      name: '',
-      category: '',
-      status: 'Pending',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      country: 'USA',
-      taxId: '',
-      paymentTerms: 'Net 30',
-      currency: 'USD',
-      riskLevel: 'Medium',
-      website: '',
-      certifications: [],
-      notes: ''
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleEdit = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    setFormData({
-      name: supplier.name,
-      category: supplier.category,
-      status: supplier.status,
-      contactPerson: supplier.contactPerson,
-      email: supplier.email,
-      phone: supplier.phone,
-      address: supplier.address,
-      city: supplier.city,
-      country: supplier.country,
-      taxId: supplier.taxId,
-      paymentTerms: supplier.paymentTerms,
-      currency: supplier.currency,
-      riskLevel: supplier.riskLevel,
-      website: supplier.website,
-      certifications: supplier.certifications,
-      notes: supplier.notes || ''
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = (supplier: Supplier) => {
-    setDeletingSupplier(supplier);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (deletingSupplier) {
-      const updatedSuppliers = suppliers.filter(s => s.id !== deletingSupplier.id);
-      setSuppliers(updatedSuppliers);
-      toast({
-        title: 'Supplier Deleted',
-        description: `${deletingSupplier.name} has been deleted.`,
-      });
-      setIsDeleteDialogOpen(false);
-      setDeletingSupplier(null);
-    }
-  };
-
-  const handleSubmit = () => {
-    if (!formData.name || !formData.category || !formData.contactPerson || !formData.email) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (editingSupplier) {
-      const updatedSupplier: Supplier = {
-        ...editingSupplier,
-        ...formData,
-        rating: editingSupplier.rating,
-        totalOrders: editingSupplier.totalOrders,
-        totalValue: editingSupplier.totalValue,
-        onTimeDelivery: editingSupplier.onTimeDelivery,
-        qualityRating: editingSupplier.qualityRating,
-        establishedDate: editingSupplier.establishedDate
-      };
-      const updatedSuppliers = suppliers.map(s => 
-        s.id === editingSupplier.id ? updatedSupplier : s
-      );
-      setSuppliers(updatedSuppliers);
-      toast({
-        title: 'Supplier Updated',
-        description: `${formData.name} has been updated.`,
-      });
-    } else {
-      const newSupplier: Supplier = {
-        id: generateId('sup'),
-        name: formData.name,
-        category: formData.category,
-        status: formData.status,
-        rating: 0,
-        contactPerson: formData.contactPerson,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        country: formData.country,
-        taxId: formData.taxId,
-        paymentTerms: formData.paymentTerms,
-        currency: formData.currency,
-        totalOrders: 0,
+  useEffect(() => {
+    const sampleSuppliers: Supplier[] = [
+      {
+        id: 'sup-001',
+        name: 'Dell Technologies',
+        category: 'Technology Hardware',
+        status: 'Active',
+        rating: 4.5,
+        contactPerson: 'John Smith',
+        totalValue: 1250000,
+        onTimeDelivery: 95,
+        riskLevel: 'Low',
+        certifications: ['ISO 9001', 'ISO 14001', 'SOC 2']
+      },
+      {
+        id: 'sup-002',
+        name: 'Office Depot Inc.',
+        category: 'Office Supplies',
+        status: 'Active',
+        rating: 4.2,
+        contactPerson: 'Sarah Wilson',
+        totalValue: 85000,
+        onTimeDelivery: 88,
+        riskLevel: 'Low',
+        certifications: ['ISO 9001', 'Green Certified']
+      },
+      {
+        id: 'sup-003',
+        name: 'Global Services Ltd',
+        category: 'Professional Services',
+        status: 'Pending',
+        rating: 3.8,
+        contactPerson: 'Mike Brown',
         totalValue: 0,
         onTimeDelivery: 0,
-        qualityRating: 0,
-        certifications: formData.certifications,
-        riskLevel: formData.riskLevel,
-        establishedDate: new Date().toISOString().split('T')[0],
-        website: formData.website,
-        notes: formData.notes
-      };
-      const updatedSuppliers = [...suppliers, newSupplier];
-      setSuppliers(updatedSuppliers);
-      toast({
-        title: 'Supplier Created',
-        description: `${formData.name} has been created.`,
-      });
-    }
-
-    setIsDialogOpen(false);
-  };
-
-  const handleApproveSupplier = (supplier: Supplier) => {
-    const updatedSuppliers = suppliers.map(s => 
-      s.id === supplier.id ? { ...s, status: 'Active' as const } : s
-    );
-    setSuppliers(updatedSuppliers);
-    toast({
-      title: 'Supplier Approved',
-      description: `${supplier.name} has been approved as a supplier`,
-    });
-  };
+        riskLevel: 'Medium',
+        certifications: ['ISO 27001']
+      }
+    ];
+    setSuppliers(sampleSuppliers);
+  }, []);
 
   const handleSupplierView = (supplier: Supplier) => {
     navigate(`/procurement/supplier-management/${supplier.id}`);
   };
 
-  const handleCertificationChange = (cert: string) => {
-    setFormData(prev => ({
-      ...prev,
-      certifications: prev.certifications.includes(cert)
-        ? prev.certifications.filter(c => c !== cert)
-        : [...prev.certifications, cert]
-    }));
+  const handleSupplierEdit = (supplier: Supplier) => {
+    toast({
+      title: 'Edit Supplier',
+      description: `Opening edit form for ${supplier.name}`,
+    });
+  };
+
+  const handleSupplierPerformance = (supplier: Supplier) => {
+    toast({
+      title: 'Supplier Performance',
+      description: `Viewing performance metrics for ${supplier.name}`,
+    });
   };
 
   return (
@@ -290,7 +149,7 @@ const SupplierManagement: React.FC = () => {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {suppliers.length > 0 ? (suppliers.reduce((sum, s) => sum + s.rating, 0) / suppliers.length).toFixed(1) : '0.0'}
+              {(suppliers.reduce((sum, s) => sum + s.rating, 0) / suppliers.length).toFixed(1)}
             </div>
             <div className="text-sm text-muted-foreground">Avg Rating</div>
             <div className="text-sm text-yellow-600">Quality score</div>
@@ -320,7 +179,7 @@ const SupplierManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Supplier Directory
-                <Button onClick={handleCreate}>
+                <Button onClick={() => toast({ title: 'Add Supplier', description: 'Opening supplier registration form' })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Supplier
                 </Button>
@@ -333,8 +192,8 @@ const SupplierManagement: React.FC = () => {
                     key={supplier.id}
                     supplier={supplier}
                     onView={handleSupplierView}
-                    onEdit={handleEdit}
-                    onPerformance={() => {}}
+                    onEdit={handleSupplierEdit}
+                    onPerformance={handleSupplierPerformance}
                   />
                 ))}
               </div>
@@ -349,7 +208,7 @@ const SupplierManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {suppliers.filter(s => s.status === 'Active').slice(0, 10).map((supplier) => (
+                {suppliers.filter(s => s.status === 'Active').map((supplier) => (
                   <div key={supplier.id} className="p-4 border rounded-lg">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="font-semibold">{supplier.name}</h4>
@@ -396,11 +255,10 @@ const SupplierManagement: React.FC = () => {
                         <p className="text-sm">Contact: {supplier.contactPerson}</p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(supplier)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review
+                        <Button size="sm" variant="outline">
+                          Review Documents
                         </Button>
-                        <Button size="sm" onClick={() => handleApproveSupplier(supplier)}>
+                        <Button size="sm">
                           <Users className="h-4 w-4 mr-2" />
                           Approve
                         </Button>
@@ -408,9 +266,6 @@ const SupplierManagement: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                {suppliers.filter(s => s.status === 'Pending').length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No pending suppliers to onboard.</p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -424,7 +279,7 @@ const SupplierManagement: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {categories.slice(0, 6).map((category) => {
+                  {['Technology Hardware', 'Office Supplies', 'Professional Services', 'Manufacturing'].map((category) => {
                     const count = suppliers.filter(s => s.category === category).length;
                     return (
                       <div key={category} className="flex justify-between">
@@ -470,225 +325,6 @@ const SupplierManagement: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Supplier Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter supplier name"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="contactPerson">Contact Person *</Label>
-                <Input
-                  id="contactPerson"
-                  value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                  placeholder="Enter contact name"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="supplier@company.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+1-555-0000"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  placeholder="https://www.supplier.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Street address"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="city">City</Label>
-                <Select value={formData.city} onValueChange={(value) => setFormData({ ...formData, city: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map(city => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="taxId">Tax ID</Label>
-                <Input
-                  id="taxId"
-                  value={formData.taxId}
-                  onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                  placeholder="XX-XXXXXXX"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="paymentTerms">Payment Terms</Label>
-                <Select value={formData.paymentTerms} onValueChange={(value) => setFormData({ ...formData, paymentTerms: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Immediate">Immediate</SelectItem>
-                    <SelectItem value="Net 15">Net 15</SelectItem>
-                    <SelectItem value="Net 30">Net 30</SelectItem>
-                    <SelectItem value="Net 45">Net 45</SelectItem>
-                    <SelectItem value="Net 60">Net 60</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="riskLevel">Risk Level</Label>
-                <Select value={formData.riskLevel} onValueChange={(value: any) => setFormData({ ...formData, riskLevel: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Certifications</Label>
-              <div className="flex flex-wrap gap-2">
-                {certificationsList.map(cert => (
-                  <Button
-                    key={cert}
-                    variant={formData.certifications.includes(cert) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleCertificationChange(cert)}
-                    type="button"
-                  >
-                    {cert}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              <Save className="h-4 w-4 mr-2" />
-              {editingSupplier ? 'Update' : 'Create'} Supplier
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <p>Are you sure you want to delete supplier "{deletingSupplier?.name}"? This action cannot be undone.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

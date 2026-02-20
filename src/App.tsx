@@ -12,16 +12,14 @@ import SalesRoutes from './pages/SalesRoutes';
 import HumanResourcesRoutes from './pages/HumanResourcesRoutes';
 import MasterDataRoutes from './pages/MasterDataRoutes';
 import BusinessIntelligenceRoutes from './pages/BusinessIntelligenceRoutes';
-import TrialCenter from './pages/TrialCenter';
 import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/erp">
       <Routes>
         <Route path="/" element={<SAPLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="trial-center" element={<TrialCenter />} />
           <Route path="finance/*" element={<FinanceRoutes />} />
           <Route path="manufacturing/*" element={<Manufacturing />} />
           <Route path="sales/*" element={<SalesRoutes />} />

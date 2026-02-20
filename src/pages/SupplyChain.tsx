@@ -120,6 +120,7 @@ const SupplyChain: React.FC = () => {
       <Tabs defaultValue="purchase-orders" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="purchase-orders" onClick={() => handleNavigation('purchase-orders')}>Purchase Orders</TabsTrigger>
+          <TabsTrigger value="inventory" onClick={() => handleNavigation('inventory')}>Inventory Management</TabsTrigger>
           <TabsTrigger value="suppliers" onClick={() => handleNavigation('supplier-management')}>Supplier Management</TabsTrigger>
           <TabsTrigger value="logistics" onClick={() => handleNavigation('transportation')}>Logistics</TabsTrigger>
         </TabsList>
@@ -174,6 +175,15 @@ const SupplyChain: React.FC = () => {
           </section>
         </TabsContent>
 
+        
+        <TabsContent value="inventory">
+          <section>
+            <h2 className="text-xl font-semibold mb-4">Inventory Management</h2>
+            <div className="text-center py-12 border-dashed border-2 border-gray-300 rounded-md">
+              <p className="text-gray-500">Inventory management content will be displayed here</p>
+            </div>
+          </section>
+        </TabsContent>
         
         <TabsContent value="suppliers">
           <section>

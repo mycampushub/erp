@@ -48,8 +48,8 @@ const SAPTile: React.FC<SAPTileProps> = ({
 
   return (
     <div 
-      className={`sap-tile p-4 flex flex-col h-full ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-      onClick={onClick ? handleTileClick : undefined}
+      className="sap-tile p-4 flex flex-col h-full cursor-pointer"
+      onClick={handleTileClick}
       onMouseEnter={handleTileHover}
     >
       <div className="flex flex-col h-full">

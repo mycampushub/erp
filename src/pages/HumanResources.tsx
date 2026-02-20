@@ -1,21 +1,25 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import SAPSection from '../components/SAPSection';
 import SAPTile from '../components/SAPTile';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
-import { useVoiceAssistantContext } from '../context/VoiceAssistantContext';
 
 const HumanResources: React.FC = () => {
-  const navigate = useNavigate();
-  const { isEnabled: isVoiceAssistantEnabled } = useVoiceAssistantContext();
+  const [isVoiceAssistantEnabled, setIsVoiceAssistantEnabled] = useState(false);
   const { speak } = useVoiceAssistant();
   
   useEffect(() => {
-    if (isVoiceAssistantEnabled) {
-      speak("Welcome to the Human Resources module. Here you can manage employees, payroll, talent management, and organizational development.");
-    }
-  }, [isVoiceAssistantEnabled, speak]);
+    const checkVoiceAssistant = () => {
+      const enabled = localStorage.getItem('voiceAssistantEnabled') === 'true';
+      setIsVoiceAssistantEnabled(enabled);
+      
+      if (enabled) {
+        speak("Welcome to the Human Resources module. Here you can manage employees, payroll, talent management, and organizational development.");
+      }
+    };
+    
+    checkVoiceAssistant();
+  }, [speak]);
 
   return (
     <div>
@@ -31,21 +35,18 @@ const HumanResources: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Central hub for employee information and self-service."
           icon={<span className="text-xl">👥</span>}
-          onClick={() => navigate('/human-resources/employee-central')}
         />
         <SAPTile 
           title="Organizational Management"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Define and maintain organizational structures."
           icon={<span className="text-xl">🏢</span>}
-          onClick={() => navigate('/human-resources/employee-central')}
         />
         <SAPTile 
           title="Personnel Administration"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Manage employee master data and personal information."
           icon={<span className="text-xl">📋</span>}
-          onClick={() => navigate('/human-resources/employee-central')}
         />
       </SAPSection>
 
@@ -59,21 +60,18 @@ const HumanResources: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Record and track employee working hours."
           icon={<span className="text-xl">⏰</span>}
-          onClick={() => navigate('/human-resources/time-management')}
         />
         <SAPTile 
           title="Leave Management"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Manage employee vacation and leave requests."
           icon={<span className="text-xl">🏖️</span>}
-          onClick={() => navigate('/human-resources/time-management')}
         />
         <SAPTile 
           title="Shift Planning"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Plan and schedule employee shifts and rotations."
           icon={<span className="text-xl">📅</span>}
-          onClick={() => navigate('/human-resources/time-management')}
         />
       </SAPSection>
 
@@ -87,21 +85,18 @@ const HumanResources: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Conduct performance reviews and goal management."
           icon={<span className="text-xl">🎯</span>}
-          onClick={() => navigate('/human-resources/performance')}
         />
         <SAPTile 
           title="Learning & Development"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Manage training programs and skill development."
           icon={<span className="text-xl">📚</span>}
-          onClick={() => navigate('/human-resources/learning')}
         />
         <SAPTile 
           title="Succession Planning"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Plan for leadership succession and career development."
           icon={<span className="text-xl">🎖️</span>}
-          onClick={() => navigate('/human-resources/succession')}
         />
       </SAPSection>
 
@@ -115,21 +110,18 @@ const HumanResources: React.FC = () => {
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Process employee payroll and salary calculations."
           icon={<span className="text-xl">💰</span>}
-          onClick={() => navigate('/human-resources/payroll')}
         />
         <SAPTile 
           title="Benefits Administration"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Manage employee benefits and insurance programs."
           icon={<span className="text-xl">🏥</span>}
-          onClick={() => navigate('/human-resources/benefits')}
         />
         <SAPTile 
           title="Compensation Management"
           isVoiceAssistantEnabled={isVoiceAssistantEnabled}
           description="Design and manage compensation structures."
           icon={<span className="text-xl">💼</span>}
-          onClick={() => navigate('/human-resources/compensation')}
         />
       </SAPSection>
     </div>

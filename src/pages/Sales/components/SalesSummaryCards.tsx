@@ -4,17 +4,9 @@ import { Skeleton } from '../../../components/ui/skeleton';
 
 interface SalesSummaryCardProps {
   isLoading: boolean;
-  onViewReport?: () => void;
-  onViewCustomerList?: () => void;
-  onViewOrderAnalytics?: () => void;
 }
 
-const SalesSummaryCards: React.FC<SalesSummaryCardProps> = ({ 
-  isLoading,
-  onViewReport,
-  onViewCustomerList,
-  onViewOrderAnalytics
-}) => {
+const SalesSummaryCards: React.FC<SalesSummaryCardProps> = ({ isLoading }) => {
   return (
     <>
       <div>
@@ -27,10 +19,7 @@ const SalesSummaryCards: React.FC<SalesSummaryCardProps> = ({
               <span className="text-green-500 font-medium text-sm">↑ 12.5%</span>
               <span className="text-xs text-gray-500">vs last quarter</span>
             </div>
-            <div 
-              className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer hover:text-blue-800"
-              onClick={onViewReport}
-            >
+            <div className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer">
               View sales report
             </div>
           </div>
@@ -47,10 +36,7 @@ const SalesSummaryCards: React.FC<SalesSummaryCardProps> = ({
               <span className="text-green-500 font-medium text-sm">↑ 5.2%</span>
               <span className="text-xs text-gray-500">vs last month</span>
             </div>
-            <div 
-              className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer hover:text-blue-800"
-              onClick={onViewCustomerList}
-            >
+            <div className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer">
               View customer list
             </div>
           </div>
@@ -67,10 +53,7 @@ const SalesSummaryCards: React.FC<SalesSummaryCardProps> = ({
               <span className="text-red-500 font-medium text-sm">↓ 2.3%</span>
               <span className="text-xs text-gray-500">vs last month</span>
             </div>
-            <div 
-              className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer hover:text-blue-800"
-              onClick={onViewOrderAnalytics}
-            >
+            <div className="mt-2 pt-2 border-t text-xs text-blue-600 cursor-pointer">
               View order analytics
             </div>
           </div>

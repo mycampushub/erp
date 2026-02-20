@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import SupplyChain from './SupplyChain';
@@ -7,6 +8,7 @@ import SupplierManagement from './SupplyChain/SupplierManagement';
 import InboundDeliveries from './SupplyChain/InboundDeliveries';
 import OutboundDeliveries from './SupplyChain/OutboundDeliveries';
 import Transportation from './SupplyChain/Transportation';
+import InventoryManagement from './SupplyChain/InventoryManagement';
 import WarehouseManagement from './SupplyChain/WarehouseManagement';
 import StockTransfers from './SupplyChain/StockTransfers';
 import PhysicalInventory from './SupplyChain/PhysicalInventory';
@@ -22,10 +24,10 @@ const SupplyChainRoutes: React.FC = () => {
       <Route path="purchase-orders" element={<PurchaseOrders />} />
       <Route path="requisitions" element={<Requisitions />} />
       <Route path="supplier-management" element={<SupplierManagement />} />
-      <Route path="supplier-performance" element={<SupplierManagement />} />
       <Route path="inbound-deliveries" element={<InboundDeliveries />} />
       <Route path="outbound-deliveries" element={<OutboundDeliveries />} />
       <Route path="transportation" element={<Transportation />} />
+      <Route path="inventory" element={<InventoryManagement />} />
       <Route path="warehouse" element={<WarehouseManagement />} />
       <Route path="stock-transfers" element={<StockTransfers />} />
       <Route path="physical-inventory" element={<PhysicalInventory />} />

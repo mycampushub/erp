@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { 
   ArrowLeft, 
   Plus, 
@@ -17,9 +16,8 @@ import {
   CheckCircle,
   Eye,
   Edit,
-  Save,
-  Trash2,
-  Download
+  Download,
+  Calendar
 } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
@@ -66,29 +64,6 @@ const TaxManagement: React.FC = () => {
   const [taxReturns, setTaxReturns] = useState<TaxReturn[]>([]);
   const [taxProvisions, setTaxProvisions] = useState<TaxProvision[]>([]);
   const [compliance, setCompliance] = useState<TaxCompliance[]>([]);
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
-  const [isProvisionDialogOpen, setIsProvisionDialogOpen] = useState(false);
-  const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
-  const [returnForm, setReturnForm] = useState({
-    returnType: 'Corporate Income Tax',
-    period: '',
-    dueDate: '',
-    taxAmount: '',
-    jurisdiction: ''
-  });
-  const [provisionForm, setProvisionForm] = useState({
-    taxType: '',
-    period: '',
-    estimatedTax: '',
-    actualTax: '',
-    status: 'Estimated'
-  });
-  const [complianceForm, setComplianceForm] = useState({
-    requirement: '',
-    jurisdiction: '',
-    dueDate: '',
-    responsible: ''
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -178,81 +153,6 @@ const TaxManagement: React.FC = () => {
     setCompliance(sampleCompliance);
   };
 
-  const handleAddTaxReturn = () => {
-    if (!returnForm.period || !returnForm.dueDate || !returnForm.taxAmount || !returnForm.jurisdiction) {
-      toast({ title: 'Validation Error', description: 'Please fill in all required fields', variant: 'destructive' });
-      return;
-    }
-
-    const newReturn: TaxReturn = {
-      id: `tr-${String(taxReturns.length + 1).padStart(3, '0')}`,
-      returnType: returnForm.returnType as TaxReturn['returnType'],
-      period: returnForm.period,
-      dueDate: returnForm.dueDate,
-      status: 'Draft',
-      taxAmount: parseFloat(returnForm.taxAmount),
-      jurisdiction: returnForm.jurisdiction
-    };
-
-    setTaxReturns([...taxReturns, newReturn]);
-    setIsReturnDialogOpen(false);
-    setReturnForm({ returnType: 'Corporate Income Tax', period: '', dueDate: '', taxAmount: '', jurisdiction: '' });
-    toast({ title: 'Tax Return Created', description: `${returnForm.returnType} for ${returnForm.period} has been created` });
-  };
-
-  const handleAddTaxProvision = () => {
-    if (!provisionForm.taxType || !provisionForm.period || !provisionForm.estimatedTax) {
-      toast({ title: 'Validation Error', description: 'Please fill in all required fields', variant: 'destructive' });
-      return;
-    }
-
-    const actualTax = provisionForm.actualTax ? parseFloat(provisionForm.actualTax) : 0;
-    const estimatedTax = parseFloat(provisionForm.estimatedTax);
-
-    const newProvision: TaxProvision = {
-      id: `tp-${String(taxProvisions.length + 1).padStart(3, '0')}`,
-      taxType: provisionForm.taxType,
-      period: provisionForm.period,
-      estimatedTax: estimatedTax,
-      actualTax: actualTax,
-      variance: actualTax - estimatedTax,
-      status: provisionForm.status as TaxProvision['status']
-    };
-
-    setTaxProvisions([...taxProvisions, newProvision]);
-    setIsProvisionDialogOpen(false);
-    setProvisionForm({ taxType: '', period: '', estimatedTax: '', actualTax: '', status: 'Estimated' });
-    toast({ title: 'Tax Provision Created', description: `${provisionForm.taxType} provision for ${provisionForm.period} has been created` });
-  };
-
-  const handleAddCompliance = () => {
-    if (!complianceForm.requirement || !complianceForm.dueDate || !complianceForm.jurisdiction) {
-      toast({ title: 'Validation Error', description: 'Please fill in all required fields', variant: 'destructive' });
-      return;
-    }
-
-    const newCompliance: TaxCompliance = {
-      id: `tc-${String(compliance.length + 1).padStart(3, '0')}`,
-      requirement: complianceForm.requirement,
-      jurisdiction: complianceForm.jurisdiction,
-      dueDate: complianceForm.dueDate,
-      status: 'Pending',
-      responsible: complianceForm.responsible || 'Tax Department'
-    };
-
-    setCompliance([...compliance, newCompliance]);
-    setIsComplianceDialogOpen(false);
-    setComplianceForm({ requirement: '', jurisdiction: '', dueDate: '', responsible: '' });
-    toast({ title: 'Compliance Requirement Added', description: `${complianceForm.requirement} has been added` });
-  };
-
-  const handleFileReturn = (taxReturn: TaxReturn) => {
-    setTaxReturns(taxReturns.map(tr => 
-      tr.id === taxReturn.id ? { ...tr, status: 'Filed' as const, filedDate: new Date().toISOString().split('T')[0] } : tr
-    ));
-    toast({ title: 'Tax Return Filed', description: `${taxReturn.returnType} has been filed` });
-  };
-
   const getStatusColor = (status: string) => {
     const colors = {
       'Draft': 'bg-gray-100 text-gray-800',
@@ -314,7 +214,12 @@ const TaxManagement: React.FC = () => {
     {
       label: 'File Return',
       icon: <FileText className="h-4 w-4" />,
-      onClick: (row: TaxReturn) => handleFileReturn(row),
+      onClick: (row: TaxReturn) => {
+        toast({
+          title: 'File Tax Return',
+          description: `Filing ${row.returnType} for ${row.period}`,
+        });
+      },
       variant: 'ghost',
       condition: (row: TaxReturn) => row.status === 'Draft'
     }
@@ -462,56 +367,10 @@ const TaxManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Tax Returns Management
-                <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setReturnForm({ returnType: 'Corporate Income Tax', period: '', dueDate: '', taxAmount: '', jurisdiction: '' })}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Prepare Return
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Prepare Tax Return</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Return Type *</Label>
-                        <Select value={returnForm.returnType} onValueChange={(v) => setReturnForm({...returnForm, returnType: v})}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Corporate Income Tax">Corporate Income Tax</SelectItem>
-                            <SelectItem value="Sales Tax">Sales Tax</SelectItem>
-                            <SelectItem value="VAT">VAT</SelectItem>
-                            <SelectItem value="Payroll Tax">Payroll Tax</SelectItem>
-                            <SelectItem value="Property Tax">Property Tax</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Period *</Label>
-                          <Input value={returnForm.period} onChange={(e) => setReturnForm({...returnForm, period: e.target.value})} placeholder="e.g., Q1 2025" />
-                        </div>
-                        <div>
-                          <Label>Due Date *</Label>
-                          <Input type="date" value={returnForm.dueDate} onChange={(e) => setReturnForm({...returnForm, dueDate: e.target.value})} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Tax Amount *</Label>
-                          <Input type="number" value={returnForm.taxAmount} onChange={(e) => setReturnForm({...returnForm, taxAmount: e.target.value})} placeholder="0.00" />
-                        </div>
-                        <div>
-                          <Label>Jurisdiction *</Label>
-                          <Input value={returnForm.jurisdiction} onChange={(e) => setReturnForm({...returnForm, jurisdiction: e.target.value})} placeholder="e.g., Federal" />
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsReturnDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddTaxReturn}><Save className="h-4 w-4 mr-2" />Create Return</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button onClick={() => toast({ title: 'New Tax Return', description: 'Opening tax return preparation form' })}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Prepare Return
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -532,54 +391,10 @@ const TaxManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Tax Provisions
-                <Dialog open={isProvisionDialogOpen} onOpenChange={setIsProvisionDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setProvisionForm({ taxType: '', period: '', estimatedTax: '', actualTax: '', status: 'Estimated' })}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Provision
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Add Tax Provision</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Tax Type *</Label>
-                          <Input value={provisionForm.taxType} onChange={(e) => setProvisionForm({...provisionForm, taxType: e.target.value})} placeholder="e.g., Income Tax" />
-                        </div>
-                        <div>
-                          <Label>Period *</Label>
-                          <Input value={provisionForm.period} onChange={(e) => setProvisionForm({...provisionForm, period: e.target.value})} placeholder="e.g., 2024" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Estimated Tax *</Label>
-                          <Input type="number" value={provisionForm.estimatedTax} onChange={(e) => setProvisionForm({...provisionForm, estimatedTax: e.target.value})} placeholder="0.00" />
-                        </div>
-                        <div>
-                          <Label>Actual Tax</Label>
-                          <Input type="number" value={provisionForm.actualTax} onChange={(e) => setProvisionForm({...provisionForm, actualTax: e.target.value})} placeholder="0.00" />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Status</Label>
-                        <Select value={provisionForm.status} onValueChange={(v) => setProvisionForm({...provisionForm, status: v})}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Estimated">Estimated</SelectItem>
-                            <SelectItem value="Final">Final</SelectItem>
-                            <SelectItem value="Audited">Audited</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsProvisionDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddTaxProvision}><Save className="h-4 w-4 mr-2" />Add Provision</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button onClick={() => toast({ title: 'New Provision', description: 'Opening tax provision setup form' })}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Provision
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -599,41 +414,10 @@ const TaxManagement: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Tax Compliance Calendar
-                <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setComplianceForm({ requirement: '', jurisdiction: '', dueDate: '', responsible: '' })}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Requirement
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Add Compliance Requirement</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Requirement *</Label>
-                        <Input value={complianceForm.requirement} onChange={(e) => setComplianceForm({...complianceForm, requirement: e.target.value})} placeholder="e.g., 1099 Forms Filing" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Jurisdiction *</Label>
-                          <Input value={complianceForm.jurisdiction} onChange={(e) => setComplianceForm({...complianceForm, jurisdiction: e.target.value})} placeholder="e.g., Federal" />
-                        </div>
-                        <div>
-                          <Label>Due Date *</Label>
-                          <Input type="date" value={complianceForm.dueDate} onChange={(e) => setComplianceForm({...complianceForm, dueDate: e.target.value})} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Responsible</Label>
-                        <Input value={complianceForm.responsible} onChange={(e) => setComplianceForm({...complianceForm, responsible: e.target.value})} placeholder="Tax Department" />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsComplianceDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddCompliance}><Save className="h-4 w-4 mr-2" />Add Requirement</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button onClick={() => toast({ title: 'New Requirement', description: 'Adding compliance requirement' })}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Requirement
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -1,24 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SAPSection from '../components/SAPSection';
 import SAPTile from '../components/SAPTile';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
-import { useVoiceAssistantContext } from '../context/VoiceAssistantContext';
-import { Calendar, Clock, ListChecks } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from '../components/ui/use-toast';
+import { Calendar, ChevronDown, Clock, ListChecks } from 'lucide-react';
 
 const Index: React.FC = () => {
-  const { isEnabled: isVoiceAssistantEnabled } = useVoiceAssistantContext();
+  const [isVoiceAssistantEnabled, setIsVoiceAssistantEnabled] = useState(false);
   const { speak } = useVoiceAssistant();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('recommended');
-  const [showInfo, setShowInfo] = useState(true);
   
   useEffect(() => {
-    if (isVoiceAssistantEnabled) {
-      speak(`Welcome to the SAP S/4HANA dashboard. This is your main workspace where you can access all modules and functions of the system.`);
-    }
-  }, [isVoiceAssistantEnabled, speak]);
+    const checkVoiceAssistant = () => {
+      const enabled = localStorage.getItem('voiceAssistantEnabled') === 'true';
+      setIsVoiceAssistantEnabled(enabled);
+      
+      if (enabled) {
+        speak(`Welcome to the SAP S/4HANA dashboard. This is your main workspace where you can access all modules and functions 
+        of the system. The layout is organized into sections like News, Pages, Apps, Insights, and To-Dos. 
+        For example, in the Pages section, you'll find quick access to modules like Finance, Manufacturing, 
+        Procurement, and Sales. The Apps section shows recommended applications based on your usage patterns 
+        and role. You can navigate through different modules using the tabs in the navigation bar above.`);
+      }
+    };
+    
+    checkVoiceAssistant();
+  }, [speak]);
+
+  const toggleVoiceAssistant = () => {
+    setIsVoiceAssistantEnabled(!isVoiceAssistantEnabled);
+  };
 
   return (
     <div>
@@ -124,62 +133,36 @@ const Index: React.FC = () => {
       >
         <div className="col-span-full mb-2">
           <div className="flex items-center border-b">
-            <button 
-              className={`px-4 py-2 font-medium text-sm hover:bg-gray-50 ${activeTab === 'favorites' ? 'text-sap-blue border-b-2 border-sap-blue' : ''}`}
-              onClick={() => setActiveTab('favorites')}
-            >
-              Favorites
-            </button>
-            <button 
-              className={`px-4 py-2 font-medium text-sm hover:bg-gray-50 ${activeTab === 'most-used' ? 'text-sap-blue border-b-2 border-sap-blue' : ''}`}
-              onClick={() => setActiveTab('most-used')}
-            >
-              Most Used
-            </button>
-            <button 
-              className={`px-4 py-2 font-medium text-sm hover:bg-gray-50 ${activeTab === 'recent' ? 'text-sap-blue border-b-2 border-sap-blue' : ''}`}
-              onClick={() => setActiveTab('recent')}
-            >
-              Recently Used
-            </button>
-            <button 
-              className={`px-4 py-2 font-medium text-sm hover:bg-gray-50 ${activeTab === 'recommended' ? 'text-sap-blue border-b-2 border-sap-blue' : ''}`}
-              onClick={() => setActiveTab('recommended')}
-            >
-              Recommended
-            </button>
+            <button className="px-4 py-2 font-medium text-sm hover:bg-gray-50">Favorites</button>
+            <button className="px-4 py-2 font-medium text-sm hover:bg-gray-50">Most Used</button>
+            <button className="px-4 py-2 font-medium text-sm hover:bg-gray-50">Recently Used</button>
+            <button className="px-4 py-2 font-medium text-sm text-sap-blue border-b-2 border-sap-blue">Recommended</button>
           </div>
         </div>
 
         <div className="col-span-full">
-          {showInfo && activeTab === 'recommended' && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center text-sm">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-500 text-white rounded-full mr-2 text-xs">i</span>
-              <p>Here, you can see applications that are recommended to you by SAP Business AI. You can choose to disable this tab using the <span className="text-blue-500">settings</span>.</p>
-              <button className="ml-auto" onClick={() => setShowInfo(false)}>
-                <span className="sr-only">Close</span>
-                <span className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</span>
-              </button>
-            </div>
-          )}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center text-sm">
+            <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-500 text-white rounded-full mr-2 text-xs">i</span>
+            <p>Here, you can see applications that are recommended to you by SAP Business AI. You can choose to disable this tab using the <span className="text-blue-500">settings</span>.</p>
+            <button className="ml-auto">
+              <span className="sr-only">Close</span>
+              <span className="text-gray-400 hover:text-gray-600">×</span>
+            </button>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { title: "Create Supplier Invoice", icon: "📄", color: "bg-purple-600", path: "/procurement" },
-              { title: "Create Customer Projects", icon: "📋", color: "bg-blue-600", path: "/project-management" },
-              { title: "Plan Customer Projects", icon: "📅", color: "bg-red-600", path: "/project-management" },
-              { title: "Display Line Items in General Ledger", icon: "📊", color: "bg-purple-600", path: "/finance" },
-              { title: "Manage Supplier Line Items", icon: "📝", color: "bg-blue-600", path: "/procurement" },
-              { title: "Supplier Invoices List", icon: "📃", color: "bg-purple-600", path: "/procurement" },
-              { title: "Manage Customer Line Items", icon: "👥", color: "bg-purple-600", path: "/sales" },
-              { title: "Manage Billing Documents", icon: "📑", color: "bg-blue-600", path: "/sales" },
-              { title: "Manage My Timesheet", icon: "⏱️", color: "bg-red-600", path: "/human-resources" },
+              { title: "Create Supplier Invoice", icon: "📄", color: "bg-purple-600" },
+              { title: "Create Customer Projects", icon: "📋", color: "bg-blue-600" },
+              { title: "Plan Customer Projects", icon: "📅", color: "bg-red-600" },
+              { title: "Display Line Items in General Ledger", icon: "📊", color: "bg-purple-600" },
+              { title: "Manage Supplier Line Items", icon: "📝", color: "bg-blue-600" },
+              { title: "Supplier Invoices List", icon: "📃", color: "bg-purple-600" },
+              { title: "Manage Customer Line Items", icon: "👥", color: "bg-purple-600" },
+              { title: "Manage Billing Documents", icon: "📑", color: "bg-blue-600" },
+              { title: "Manage My Timesheet", icon: "⏱️", color: "bg-red-600" },
             ].map((app, index) => (
-              <div 
-                key={index} 
-                className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer"
-                onClick={() => navigate(app.path)}
-              >
+              <div key={index} className="flex items-center p-3 border rounded bg-white">
                 <div className={`w-8 h-8 rounded flex items-center justify-center text-white ${app.color}`}>
                   <span>{app.icon}</span>
                 </div>
@@ -187,10 +170,7 @@ const Index: React.FC = () => {
               </div>
             ))}
             
-            <div 
-              className="flex items-center p-3 border rounded bg-white hover:bg-gray-50 cursor-pointer"
-              onClick={() => navigate('/sales')}
-            >
+            <div className="flex items-center p-3 border rounded bg-white">
               <div className="w-8 h-8 rounded bg-purple-600 flex items-center justify-center text-white">
                 <span>📬</span>
               </div>
@@ -209,12 +189,7 @@ const Index: React.FC = () => {
         description="This section provides key business insights and analytics."
       >
         <div className="col-span-full flex justify-end mb-2">
-          <button 
-            className="text-sm text-blue-500 hover:text-blue-700"
-            onClick={() => toast({ title: "Add Tiles", description: "Opening dialog to add new insight tiles..." })}
-          >
-            Add Tiles
-          </button>
+          <button className="text-sm text-blue-500">Add Tiles</button>
         </div>
         
         <SAPTile 

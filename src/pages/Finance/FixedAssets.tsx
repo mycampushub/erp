@@ -4,12 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ArrowLeft, Plus, Package, Calculator, TrendingDown, Settings, Eye, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Package, Calculator, TrendingDown, Settings } from 'lucide-react';
 import PageHeader from '../../components/page/PageHeader';
 import { useVoiceAssistantContext } from '../../context/VoiceAssistantContext';
 import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
@@ -33,29 +29,12 @@ interface Asset {
   costCenter: string;
 }
 
-const defaultForm: Omit<Asset, 'id' | 'assetNumber' | 'accumulatedDepreciation' | 'bookValue'> = {
-  description: '',
-  assetClass: 'Computer Equipment',
-  acquisitionValue: 0,
-  acquisitionDate: new Date().toISOString().split('T')[0],
-  usefulLife: 5,
-  depreciationMethod: 'Straight Line',
-  status: 'Active',
-  location: '',
-  costCenter: '',
-};
-
 const FixedAssets: React.FC = () => {
   const navigate = useNavigate();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
   const [activeTab, setActiveTab] = useState('assets');
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [form, setForm] = useState<Omit<Asset, 'id' | 'assetNumber' | 'accumulatedDepreciation' | 'bookValue'>>(defaultForm);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -99,73 +78,6 @@ const FixedAssets: React.FC = () => {
     ];
     setAssets(sampleAssets);
   }, []);
-
-  const openCreate = () => {
-    setEditingAsset(null);
-    setForm(defaultForm);
-    setIsDialogOpen(true);
-  };
-
-  const openEdit = (asset: Asset) => {
-    setEditingAsset(asset);
-    setForm({
-      description: asset.description,
-      assetClass: asset.assetClass,
-      acquisitionValue: asset.acquisitionValue,
-      acquisitionDate: asset.acquisitionDate,
-      usefulLife: asset.usefulLife,
-      depreciationMethod: asset.depreciationMethod,
-      status: asset.status,
-      location: asset.location,
-      costCenter: asset.costCenter,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleSave = () => {
-    if (!form.description.trim()) {
-      toast({ title: 'Validation Error', description: 'Asset description is required.', variant: 'destructive' });
-      return;
-    }
-    if (form.acquisitionValue <= 0) {
-      toast({ title: 'Validation Error', description: 'Acquisition value must be greater than 0.', variant: 'destructive' });
-      return;
-    }
-    if (editingAsset) {
-      const updatedAsset = { ...editingAsset, ...form };
-      updatedAsset.bookValue = updatedAsset.acquisitionValue - updatedAsset.accumulatedDepreciation;
-      setAssets(prev => prev.map(a => a.id === editingAsset.id ? updatedAsset : a));
-      toast({ title: 'Asset Updated', description: `${form.description} has been updated.` });
-    } else {
-      const newAsset: Asset = {
-        id: String(Date.now()),
-        assetNumber: `AST-${String(assets.length + 1).padStart(3, '0')}`,
-        ...form,
-        accumulatedDepreciation: 0,
-        bookValue: form.acquisitionValue,
-      };
-      setAssets(prev => [...prev, newAsset]);
-      toast({ title: 'Asset Created', description: `${form.description} has been added to the asset register.` });
-    }
-    setIsDialogOpen(false);
-  };
-
-  const handleDelete = (asset: Asset) => {
-    setAssets(prev => prev.filter(a => a.id !== asset.id));
-    toast({ title: 'Asset Deleted', description: `${asset.description} has been removed.` });
-  };
-
-  const handleView = (asset: Asset) => {
-    setSelectedAsset(asset);
-    setIsViewDialogOpen(true);
-  };
-
-  const handleCalculateDepreciation = (asset: Asset) => {
-    const annualDepreciation = asset.depreciationMethod === 'Straight Line' 
-      ? asset.acquisitionValue / asset.usefulLife
-      : asset.acquisitionValue * 0.2;
-    toast({ title: 'Depreciation Calculated', description: `Annual depreciation: $${annualDepreciation.toFixed(2)}` });
-  };
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -216,26 +128,24 @@ const FixedAssets: React.FC = () => {
   const actions: TableAction[] = [
     {
       label: 'View Details',
-      icon: <Eye className="h-4 w-4" />,
-      onClick: handleView,
-      variant: 'ghost'
-    },
-    {
-      label: 'Edit',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: openEdit,
+      icon: <Package className="h-4 w-4" />,
+      onClick: (row: Asset) => {
+        toast({
+          title: 'View Asset',
+          description: `Opening details for ${row.assetNumber}`,
+        });
+      },
       variant: 'ghost'
     },
     {
       label: 'Calculate Depreciation',
       icon: <Calculator className="h-4 w-4" />,
-      onClick: handleCalculateDepreciation,
-      variant: 'ghost'
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: handleDelete,
+      onClick: (row: Asset) => {
+        toast({
+          title: 'Calculate Depreciation',
+          description: `Calculating depreciation for ${row.assetNumber}`,
+        });
+      },
       variant: 'ghost'
     }
   ];
@@ -319,7 +229,7 @@ const FixedAssets: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 Asset Register
-                <Button onClick={openCreate}>
+                <Button onClick={() => toast({ title: 'Add Asset', description: 'Opening asset creation form' })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Asset
                 </Button>
@@ -463,187 +373,6 @@ const FixedAssets: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description *</Label>
-              <Input
-                id="description"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Enter asset description"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="assetClass">Asset Class</Label>
-                <Select value={form.assetClass} onValueChange={(value) => setForm({ ...form, assetClass: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Computer Equipment">Computer Equipment</SelectItem>
-                    <SelectItem value="Vehicles">Vehicles</SelectItem>
-                    <SelectItem value="Furniture">Furniture</SelectItem>
-                    <SelectItem value="Machinery">Machinery</SelectItem>
-                    <SelectItem value="Buildings">Buildings</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={form.status} onValueChange={(value: 'Active' | 'Retired' | 'Under Construction' | 'Sold') => setForm({ ...form, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Under Construction">Under Construction</SelectItem>
-                    <SelectItem value="Retired">Retired</SelectItem>
-                    <SelectItem value="Sold">Sold</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="acquisitionValue">Acquisition Value *</Label>
-                <Input
-                  id="acquisitionValue"
-                  type="number"
-                  value={form.acquisitionValue}
-                  onChange={(e) => setForm({ ...form, acquisitionValue: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="acquisitionDate">Acquisition Date</Label>
-                <Input
-                  id="acquisitionDate"
-                  type="date"
-                  value={form.acquisitionDate}
-                  onChange={(e) => setForm({ ...form, acquisitionDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="usefulLife">Useful Life (Years)</Label>
-                <Input
-                  id="usefulLife"
-                  type="number"
-                  value={form.usefulLife}
-                  onChange={(e) => setForm({ ...form, usefulLife: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="depreciationMethod">Depreciation Method</Label>
-                <Select value={form.depreciationMethod} onValueChange={(value: 'Straight Line' | 'Declining Balance' | 'Units of Production') => setForm({ ...form, depreciationMethod: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Straight Line">Straight Line</SelectItem>
-                    <SelectItem value="Declining Balance">Declining Balance</SelectItem>
-                    <SelectItem value="Units of Production">Units of Production</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="Enter location"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="costCenter">Cost Center</Label>
-              <Input
-                id="costCenter"
-                value={form.costCenter}
-                onChange={(e) => setForm({ ...form, costCenter: e.target.value })}
-                placeholder="Enter cost center"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingAsset ? 'Update' : 'Add Asset'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Asset Details</DialogTitle>
-          </DialogHeader>
-          {selectedAsset && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Asset Number:</span>
-                <span className="font-medium">{selectedAsset.assetNumber}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Description:</span>
-                <span className="font-medium">{selectedAsset.description}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Asset Class:</span>
-                <span className="font-medium">{selectedAsset.assetClass}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Acquisition Value:</span>
-                <span className="font-medium">${selectedAsset.acquisitionValue.toLocaleString()}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Accumulated Depreciation:</span>
-                <span className="font-medium">${selectedAsset.accumulatedDepreciation.toLocaleString()}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Book Value:</span>
-                <span className="font-medium">${selectedAsset.bookValue.toLocaleString()}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Acquisition Date:</span>
-                <span className="font-medium">{selectedAsset.acquisitionDate}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Useful Life:</span>
-                <span className="font-medium">{selectedAsset.usefulLife} years</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Depreciation Method:</span>
-                <span className="font-medium">{selectedAsset.depreciationMethod}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Location:</span>
-                <span className="font-medium">{selectedAsset.location}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Cost Center:</span>
-                <span className="font-medium">{selectedAsset.costCenter}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-500">Status:</span>
-                <Badge className={getStatusColor(selectedAsset.status)}>{selectedAsset.status}</Badge>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

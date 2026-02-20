@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import DataTable from '../../components/data/DataTable';
 import { Column } from '../../components/data/DataTable';
 import { Separator } from '../../components/ui/separator';
-import { useToast } from '../../hooks/use-toast';
 
 // Sample order data
 const orderData = {
@@ -76,25 +75,12 @@ const SalesOrderDetail: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { isEnabled } = useVoiceAssistantContext();
   const { speak } = useVoiceAssistant();
-  const { toast } = useToast();
   
   useEffect(() => {
     if (isEnabled) {
       speak(`You are viewing sales order ${orderData.id} for customer ${orderData.customer}. This order is currently ${orderData.status.toLowerCase()}.`);
     }
   }, [isEnabled, speak]);
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleEmail = () => {
-    toast({ title: 'Email Sent', description: `Order ${orderData.id} has been emailed to customer.` });
-  };
-
-  const handleReleaseOrder = () => {
-    toast({ title: 'Order Released', description: `Order ${orderData.id} has been released for processing.` });
-  };
 
   // Order items columns configuration
   const itemColumns: Column[] = [
@@ -149,15 +135,15 @@ const SalesOrderDetail: React.FC = () => {
           </Badge>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" className="flex items-center" onClick={handlePrint}>
+          <Button variant="outline" size="sm" className="flex items-center">
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
-          <Button variant="outline" size="sm" className="flex items-center" onClick={handleEmail}>
+          <Button variant="outline" size="sm" className="flex items-center">
             <Mail className="h-4 w-4 mr-2" />
             Email
           </Button>
-          <Button variant="default" size="sm" className="flex items-center" onClick={handleReleaseOrder}>
+          <Button variant="default" size="sm" className="flex items-center">
             <Check className="h-4 w-4 mr-2" />
             Release Order
           </Button>

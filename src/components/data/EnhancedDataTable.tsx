@@ -4,55 +4,64 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { Badge } from '../ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { useToast } from '../../hooks/use-toast';
 import { 
   ChevronUp, 
   ChevronDown, 
   Search, 
+  Filter, 
   Download, 
+  Upload, 
   MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Copy,
   RefreshCw
 } from 'lucide-react';
 
-export interface EnhancedColumn<T = { id: string }> {
-  key: keyof T | string;
+export interface EnhancedColumn {
+  key: string;
   header: string;
   sortable?: boolean;
   filterable?: boolean;
   searchable?: boolean;
   width?: string;
-  render?: (value: unknown, row?: T, index?: number) => React.ReactNode;
-  filterOptions?: { label: string; value: string }[];
-  exportFormatter?: (value: unknown) => string;
+  render?: (value: any, row?: any, index?: number) => React.ReactNode;
+  filterOptions?: { label: string; value: any }[];
+  exportFormatter?: (value: any) => string;
 }
 
-export interface TableAction<T = { id: string }> {
+export interface TableAction {
   label: string;
   icon?: React.ReactNode;
-  onClick: (row: T, index: number) => void;
+  onClick: (row: any, index: number) => void;
   variant?: 'default' | 'outline' | 'destructive' | 'secondary' | 'ghost' | 'link';
-  condition?: (row: T) => boolean;
+  condition?: (row: any) => boolean;
 }
 
-interface EnhancedDataTableProps<T extends { id: string } = { id: string }> {
-  columns: EnhancedColumn<T>[];
-  data: T[];
-  actions?: TableAction<T>[];
-  bulkActions?: TableAction<T>[];
+interface EnhancedDataTableProps {
+  columns: EnhancedColumn[];
+  data: any[];
+  actions?: TableAction[];
+  bulkActions?: TableAction[];
   searchPlaceholder?: string;
   pageSize?: number;
   exportable?: boolean;
   importable?: boolean;
   refreshable?: boolean;
   onRefresh?: () => void;
-  onExport?: (data: T[], format: string) => void;
-  onImport?: (data: T[]) => void;
+  onExport?: (data: any[], format: string) => void;
+  onImport?: (data: any[]) => void;
   className?: string;
   emptyMessage?: string;
   loading?: boolean;
 }
 
-function EnhancedDataTable<T extends { id: string } = { id: string }>({
+const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
   columns,
   data,
   actions = [],
@@ -64,37 +73,44 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
   refreshable = false,
   onRefresh,
   onExport,
+  onImport,
   className = "",
   emptyMessage = "No data available",
   loading = false
-}: EnhancedDataTableProps<T>) {
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Record<string, any>>({});
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
   const { toast } = useToast();
 
+  // Filter and search data
   const filteredData = useMemo(() => {
     let result = [...data];
 
+    // Apply search
     if (searchTerm) {
       const searchableColumns = columns.filter(col => col.searchable !== false);
       result = result.filter(row =>
         searchableColumns.some(col => {
-          const value = row[col.key as keyof T];
-          return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
+          const value = row[col.key];
+          return value && value.toString().toLowerCase().includes(searchTerm.toLowerCase());
         })
       );
     }
 
+    // Apply filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') {
+      if (value !== '' && value !== null && value !== undefined) {
         result = result.filter(row => {
-          const colValue = row[key as keyof T];
-          return String(colValue) === value;
+          const rowValue = row[key];
+          if (Array.isArray(value)) {
+            return value.includes(rowValue);
+          }
+          return rowValue === value;
         });
       }
     });
@@ -102,22 +118,22 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
     return result;
   }, [data, searchTerm, filters, columns]);
 
+  // Sort data
   const sortedData = useMemo(() => {
     if (!sortConfig) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      const aValue = a[sortConfig.key as keyof T];
-      const bValue = b[sortConfig.key as keyof T];
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
 
       if (aValue === bValue) return 0;
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
+      
       const comparison = aValue < bValue ? -1 : 1;
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
   }, [filteredData, sortConfig]);
 
+  // Paginate data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return sortedData.slice(startIndex, startIndex + pageSize);
@@ -126,9 +142,12 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
   const totalPages = Math.ceil(sortedData.length / pageSize);
 
   const handleSort = (key: string) => {
-    setSortConfig(prev => {
-      if (prev?.key === key) {
-        return prev.direction === 'asc' 
+    const column = columns.find(col => col.key === key);
+    if (!column?.sortable) return;
+
+    setSortConfig(current => {
+      if (current?.key === key) {
+        return current.direction === 'asc' 
           ? { key, direction: 'desc' }
           : null;
       }
@@ -136,12 +155,32 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
     });
   };
 
+  const handleSelectRow = (index: number, checked: boolean) => {
+    setSelectedRows(current => {
+      if (checked) {
+        return [...current, index];
+      }
+      return current.filter(i => i !== index);
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(paginatedData.map((_, index) => index));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
   const handleExport = () => {
-    const exportData = sortedData;
     if (onExport) {
+      const exportData = selectedRows.length > 0 
+        ? selectedRows.map(index => paginatedData[index])
+        : sortedData;
       onExport(exportData, exportFormat);
     } else {
-      const csvContent = generateCSV(exportData);
+      // Default export logic
+      const csvContent = generateCSV(sortedData);
       downloadFile(csvContent, `export.${exportFormat}`, 'text/csv');
     }
     setIsExportDialogOpen(false);
@@ -151,15 +190,15 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
     });
   };
 
-  const generateCSV = (exportData: T[]): string => {
+  const generateCSV = (exportData: any[]) => {
     if (exportData.length === 0) return '';
     
     const headers = columns.map(col => col.header).join(',');
     const rows = exportData.map(row => 
       columns.map(col => {
         const value = col.exportFormatter 
-          ? col.exportFormatter(row[col.key as keyof T])
-          : row[col.key as keyof T];
+          ? col.exportFormatter(row[col.key])
+          : row[col.key];
         return typeof value === 'string' && value.includes(',') 
           ? `"${value}"` 
           : value;
@@ -188,24 +227,9 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
       : <ChevronDown className="h-4 w-4" />;
   };
 
-  const toggleSelectAll = () => {
-    if (selectedRows.length === paginatedData.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(paginatedData.map((_, i) => i));
-    }
-  };
-
-  const toggleRow = (index: number) => {
-    setSelectedRows(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
-  };
-
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Toolbar */}
       <div className="flex items-center justify-between space-x-4">
         <div className="flex items-center space-x-2 flex-1">
           <div className="relative max-w-sm">
@@ -218,11 +242,12 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
             />
           </div>
           
+          {/* Filters */}
           {columns.filter(col => col.filterable).map(column => (
             <Select
-              key={String(column.key)}
-              value={filters[String(column.key)] || ''}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, [String(column.key)]: value }))}
+              key={column.key}
+              value={filters[column.key] || ''}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, [column.key]: value }))}
             >
               <SelectTrigger className="w-40">
                 <SelectValue placeholder={`Filter ${column.header}`} />
@@ -253,93 +278,129 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
               Export
             </Button>
           )}
+          
+          {importable && onImport && (
+            <Button variant="outline" size="sm">
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedRows.length > 0 && bulkActions.length > 0 && (
+        <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border">
+          <span className="text-sm font-medium">
+            {selectedRows.length} row(s) selected
+          </span>
+          {bulkActions.map((action, index) => (
+            <Button
+              key={index}
+              variant={action.variant || 'outline'}
+              size="sm"
+              onClick={() => {
+                const selectedData = selectedRows.map(index => paginatedData[index]);
+                action.onClick(selectedData, -1);
+                setSelectedRows([]);
+              }}
+            >
+              {action.icon}
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.length === paginatedData.length && paginatedData.length > 0}
-                  onChange={toggleSelectAll}
-                  className="h-4 w-4"
-                />
-              </TableHead>
-              {columns.map(column => (
-                <TableHead 
-                  key={String(column.key)}
-                  style={{ width: column.width }}
-                  className={column.sortable ? 'cursor-pointer' : ''}
-                  onClick={() => column.sortable && handleSort(String(column.key))}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>{column.header}</span>
-                    {column.sortable && getSortIcon(String(column.key))}
-                  </div>
-                </TableHead>
-              ))}
-              {actions.length > 0 && <TableHead className="w-12">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={columns.length + (actions.length > 0 ? 1 : 0) + 1} className="h-24 text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : paginatedData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + (actions.length > 0 ? 1 : 0) + 1} className="h-24 text-center">
-                  {emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedData.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.includes(rowIndex)}
-                      onChange={() => toggleRow(rowIndex)}
-                      className="h-4 w-4"
+                {(bulkActions.length > 0 || actions.some(a => a.label === 'Select')) && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedRows.length === paginatedData.length && paginatedData.length > 0}
+                      onCheckedChange={handleSelectAll}
                     />
+                  </TableHead>
+                )}
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.key}
+                    className={`${column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''} ${column.width || ''}`}
+                    onClick={() => handleSort(column.key)}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>{column.header}</span>
+                      {getSortIcon(column.key)}
+                    </div>
+                  </TableHead>
+                ))}
+                {actions.length > 0 && (
+                  <TableHead className="w-32">Actions</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (bulkActions.length > 0 ? 1 : 0)}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    {emptyMessage}
                   </TableCell>
-                  {columns.map(column => (
-                    <TableCell key={String(column.key)}>
-                      {column.render 
-                        ? column.render(row[column.key as keyof T], row, rowIndex)
-                        : String(row[column.key as keyof T] ?? '')}
-                    </TableCell>
-                  ))}
-                  {actions.length > 0 && (
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        {actions
-                          .filter(action => !action.condition || action.condition(row))
-                          .map((action, actionIndex) => (
-                            <Button
-                              key={actionIndex}
-                              variant={action.variant || 'ghost'}
-                              size="sm"
-                              onClick={() => action.onClick(row, rowIndex)}
-                            >
-                              {action.icon || action.label}
-                            </Button>
-                          ))}
-                      </div>
-                    </TableCell>
-                  )}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                paginatedData.map((row, index) => (
+                  <TableRow key={index} className="hover:bg-muted/50">
+                    {(bulkActions.length > 0 || actions.some(a => a.label === 'Select')) && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRows.includes(index)}
+                          onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
+                        />
+                      </TableCell>
+                    )}
+                    {columns.map((column) => (
+                      <TableCell key={column.key}>
+                        {column.render ? column.render(row[column.key], row, index) : row[column.key]}
+                      </TableCell>
+                    ))}
+                    {actions.length > 0 && (
+                      <TableCell>
+                        <div className="flex space-x-1">
+                          {actions
+                            .filter(action => !action.condition || action.condition(row))
+                            .map((action, actionIndex) => (
+                              <Button
+                                key={actionIndex}
+                                variant={action.variant || 'ghost'}
+                                size="sm"
+                                onClick={() => action.onClick(row, index)}
+                              >
+                                {action.icon}
+                                {action.label}
+                              </Button>
+                            ))}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
@@ -349,18 +410,30 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              onClick={() => setCurrentPage(current => Math.max(1, current - 1))}
               disabled={currentPage === 1}
             >
               Previous
             </Button>
-            <span className="text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
+            <div className="flex space-x-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = i + 1;
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              })}
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() => setCurrentPage(current => Math.min(totalPages, current + 1))}
               disabled={currentPage === totalPages}
             >
               Next
@@ -369,37 +442,45 @@ function EnhancedDataTable<T extends { id: string } = { id: string }>({
         </div>
       )}
 
-      {isExportDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">Export Data</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Export Format</label>
-                <Select value={exportFormat} onValueChange={setExportFormat}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="csv">CSV</SelectItem>
-                    <SelectItem value="json">JSON</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleExport}>
-                  Export
-                </Button>
-              </div>
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Data</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Export Format</label>
+              <Select value={exportFormat} onValueChange={setExportFormat}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="csv">CSV</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                  <SelectItem value="excel">Excel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {selectedRows.length > 0 
+                ? `Exporting ${selectedRows.length} selected rows`
+                : `Exporting all ${sortedData.length} rows`
+              }
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleExport}>
+                Export
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
 
 export default EnhancedDataTable;
