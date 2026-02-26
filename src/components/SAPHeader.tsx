@@ -169,11 +169,11 @@ const SAPHeader: React.FC<SAPHeaderProps> = ({ onMenuClick }) => {
           </Link>
           
           <a 
-            href="https://skillsim.vercel.app/dashboard" 
+            href="https://careertodo.com/practice-lab" 
             target="_self"
             className="ml-4 px-4 py-2 bg-sap-blue text-white rounded hover:bg-blue-700 transition-colors font-medium"
           >
-            Master Dashboard
+            Lab Dashboard
           </a>
         </div>
         
